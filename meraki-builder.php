@@ -3,7 +3,7 @@
  * Plugin Name: Meraki Builder
  * Plugin URI: https://github.com/meraki8/meraki-builder
  * Description: A quiet visual page builder for the Meraki theme.
- * Version: 0.1.0
+ * Version: 0.1.1
  * Requires at least: 6.6
  * Requires PHP: 7.4
  * Author: Meraki
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'MERAKI_BUILDER_VERSION', '0.1.0' );
+define( 'MERAKI_BUILDER_VERSION', '0.1.1' );
 define( 'MERAKI_BUILDER_DIR', plugin_dir_path( __FILE__ ) );
 define( 'MERAKI_BUILDER_URL', plugin_dir_url( __FILE__ ) );
 define( 'MERAKI_BUILDER_UPDATE_URL', 'https://projec-meraki-app-production.up.railway.app/updates/meraki-builder.json' );

@@ -19,9 +19,12 @@ import {
 	insertNode,
 	removeNode,
 	moveNode,
+	moveNodeWrapped,
 	depthOf,
 	subtreeHeight,
 } from "./tree.js";
+
+const BOTTOM_ZONE = "__bottom__";
 
 const BOOT = window.MERAKI_BUILDER;
 const MAX_DEPTH = BOOT.maxDepth || 10;
@@ -35,7 +38,7 @@ function reducer(state, action) {
 			return {
 				...state,
 				tree: insertNode(state.tree, action.parentId, action.index, node),
-				selectedId: node.id,
+				selectedId: action.selectId || node.id,
 				dirty: true,
 			};
 		}
@@ -43,6 +46,12 @@ function reducer(state, action) {
 			return {
 				...state,
 				tree: moveNode(state.tree, action.id, action.parentId, action.index),
+				dirty: true,
+			};
+		case "moveWrap":
+			return {
+				...state,
+				tree: moveNodeWrapped(state.tree, action.id, action.parentId, action.index, action.wrapper),
 				dirty: true,
 			};
 		case "props":
@@ -116,6 +125,8 @@ function App() {
 	const validContainer = useCallback(
 		(containerId, drag) => {
 			const t = treeRef.current;
+			if (containerId === BOTTOM_ZONE) return true; // always targets root level
+
 			const container = findNode(t, containerId);
 			if (!container || container.type !== "container") return false;
 			const depth = depthOf(t, containerId);
@@ -199,6 +210,15 @@ function App() {
 	const resolveTarget = useCallback(
 		(overId, drag) => {
 			const t = treeRef.current;
+
+			// The persistent bottom zone always appends at root level.
+			if (overId === BOTTOM_ZONE) {
+				const el = nodeEls.current.get(BOTTOM_ZONE);
+				if (!el) return null;
+				const r = el.getBoundingClientRect();
+				return { parentId: t.id, index: t.children.length, line: { x: r.left + 6, y: r.top + 6, w: r.width - 12, h: 2 } };
+			}
+
 			const parent = findParent(t, overId);
 			if (parent && parent.type === "container" && validContainer(parent.id, drag)) {
 				const el = nodeEls.current.get(overId);
@@ -208,7 +228,10 @@ function App() {
 					const p = row ? pointer.current.x : pointer.current.y;
 					const start = row ? r.left : r.top;
 					const end = row ? r.right : r.bottom;
-					const edge = Math.min(16, (end - start) / 4);
+					// Generous zones: landing as a sibling is the easy gesture,
+					// nesting the deliberate one. Roomiest at root level.
+					const cap = parent.id === t.id ? 40 : 28;
+					const edge = Math.min(cap, (end - start) / 3);
 					const idx = parent.children.findIndex((c) => c.id === overId);
 					if (p < start + edge) return computeTarget(parent.id, idx);
 					if (p > end - edge) return computeTarget(parent.id, idx + 1);
@@ -239,10 +262,28 @@ function App() {
 		setActive(null);
 		setTarget(null);
 		if (!drop || !drag) return;
+
+		const t = treeRef.current;
+		const atRoot = drop.parentId === t.id;
+
 		if (drag.kind === "palette") {
-			dispatch({ type: "insert", parentId: drop.parentId, index: drop.index, node: createNode(drag.widgetType) });
+			const node = createNode(drag.widgetType);
+			if (atRoot && drag.widgetType !== "container") {
+				// Root invariant: non-containers get auto-wrapped; select the
+				// widget the user actually dropped.
+				const wrapper = createNode("container");
+				wrapper.children = [node];
+				dispatch({ type: "insert", parentId: drop.parentId, index: drop.index, node: wrapper, selectId: node.id });
+			} else {
+				dispatch({ type: "insert", parentId: drop.parentId, index: drop.index, node });
+			}
 		} else if (drag.kind === "node") {
-			dispatch({ type: "move", id: drag.nodeId, parentId: drop.parentId, index: drop.index });
+			const dragged = findNode(t, drag.nodeId);
+			if (atRoot && dragged && dragged.type !== "container") {
+				dispatch({ type: "moveWrap", id: drag.nodeId, parentId: drop.parentId, index: drop.index, wrapper: createNode("container") });
+			} else {
+				dispatch({ type: "move", id: drag.nodeId, parentId: drop.parentId, index: drop.index });
+			}
 		}
 	};
 
@@ -334,6 +375,7 @@ function App() {
 										dispatch={dispatch}
 										registerEl={registerEl}
 									/>
+									<BottomZone registerEl={registerEl} />
 								</div>
 							</article>
 						</main>
@@ -398,6 +440,19 @@ function PaletteItem({ type, label }) {
 
 /* ---------------------------------------------------------------- canvas */
 
+function BottomZone({ registerEl }) {
+	const { setNodeRef, isOver } = useDroppable({ id: BOTTOM_ZONE });
+	const ref = (el) => {
+		setNodeRef(el);
+		registerEl(BOTTOM_ZONE, el);
+	};
+	return (
+		<div ref={ref} className={"mb-bottom-zone" + (isOver ? " is-over" : "")} data-testid="bottom-zone">
+			Drag a widget here
+		</div>
+	);
+}
+
 function NodeView({ node, rootId, selectedId, dispatch, registerEl }) {
 	const isRoot = node.id === rootId;
 	const isContainer = node.type === "container";
@@ -425,14 +480,16 @@ function NodeView({ node, rootId, selectedId, dispatch, registerEl }) {
 
 	if (isContainer) {
 		const p = node.props;
-		const cls = `${editorCls} m-${node.id} mb-container mb-${p.direction === "row" ? "row" : "column"} mb-gap-${p.gap} mb-${p.width === "full" ? "full" : "contained"}`;
+		// The root is the page, never a width-constraining section.
+		const width = isRoot ? "full" : p.width === "full" ? "full" : "contained";
+		const cls = `${editorCls} m-${node.id} mb-container mb-${p.direction === "row" ? "row" : "column"} mb-gap-${p.gap} mb-${width}`;
 		return (
 			<div ref={ref} className={cls} data-mbid={node.id} onClick={onClick} {...listeners} {...attributes}>
 				{node.children.length ? (
 					node.children.map((child) => (
 						<NodeView key={child.id} node={child} rootId={rootId} selectedId={selectedId} dispatch={dispatch} registerEl={registerEl} />
 					))
-				) : (
+				) : isRoot ? null : (
 					<div className="mb-empty">Drop widgets here</div>
 				)}
 			</div>
@@ -492,12 +549,14 @@ function BlockTab({ node, isRoot, dispatch }) {
 							<option value="lg">Large</option>
 						</select>
 					</Field>
-					<Field label="Width">
-						<select name="width" value={node.props.width} onChange={(e) => set({ width: e.target.value })}>
-							<option value="contained">Contained</option>
-							<option value="full">Full</option>
-						</select>
-					</Field>
+					{!isRoot && (
+						<Field label="Width">
+							<select name="width" value={node.props.width} onChange={(e) => set({ width: e.target.value })}>
+								<option value="full">Full</option>
+								<option value="contained">Contained</option>
+							</select>
+						</Field>
+					)}
 				</>
 			)}
 

@@ -234,6 +234,25 @@
 	pointer-events: none;
 }
 
+/* Persistent drop area after the last root-level row: dropping here
+   always creates a new root-level section, never nests. */
+.mb-bottom-zone {
+	margin: 1rem 0.25rem 0;
+	border: 1px dashed var(--color-border, #d8cfc0);
+	border-radius: 6px;
+	color: var(--color-muted, #5e574c);
+	font-size: 0.8125rem;
+	text-align: center;
+	padding: 1.5rem 1rem;
+	transition: border-color 120ms, background 120ms;
+}
+
+.mb-bottom-zone.is-over {
+	border-color: var(--color-accent, #9c4221);
+	background: rgba(156, 66, 33, 0.06);
+	color: var(--color-accent, #9c4221);
+}
+
 /* ------------------------------------------------------------------ dnd */
 .mb-indicator {
 	position: fixed;

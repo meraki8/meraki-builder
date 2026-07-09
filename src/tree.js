@@ -5,7 +5,9 @@
 export const WIDGETS = {
 	container: {
 		label: "Container",
-		defaults: { direction: "column", gap: "md", width: "contained" },
+		// GenerateBlocks-style: the outer container is a full-width section
+		// band; content wrapping comes from nesting a contained container.
+		defaults: { direction: "column", gap: "md", width: "full" },
 	},
 	text: {
 		label: "Text",
@@ -98,6 +100,22 @@ export function moveNode(root, id, parentId, index) {
 	const { root: without, removed } = removeNode(root, id);
 	if (!removed) return root;
 	return insertNode(without, parentId, index, removed);
+}
+
+export function moveNodeWrapped(root, id, parentId, index, wrapper) {
+	if (id === parentId) return root;
+	const node = findNode(root, id);
+	if (!node || findNode(node, parentId)) return root;
+
+	const oldParent = findParent(root, id);
+	if (oldParent && oldParent.id === parentId) {
+		const oldIndex = oldParent.children.findIndex((c) => c.id === id);
+		if (oldIndex < index) index -= 1;
+	}
+
+	const { root: without, removed } = removeNode(root, id);
+	if (!removed) return root;
+	return insertNode(without, parentId, index, { ...wrapper, children: [removed] });
 }
 
 export function depthOf(root, id, depth = 0) {

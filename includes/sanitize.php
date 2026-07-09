@@ -15,9 +15,9 @@ defined( 'ABSPATH' ) || exit;
 function meraki_builder_widget_schema() {
 	return array(
 		'container' => array(
-			'direction' => array( 'row', 'column' ),
-			'gap'       => array( 'none', 'sm', 'md', 'lg' ),
-			'width'     => array( 'contained', 'full' ),
+			'direction' => array( 'column', 'row' ),
+			'gap'       => array( 'md', 'none', 'sm', 'lg' ),
+			'width'     => array( 'full', 'contained' ),
 		),
 		'text'      => array(
 			'tag'     => array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p' ),
@@ -104,12 +104,38 @@ function meraki_builder_sanitize_node( $node, $depth = 0 ) {
 }
 
 /**
- * Sanitize a whole tree. The root must be a container.
+ * Sanitize a whole tree. The root must be a container, and root
+ * children must be containers — non-containers are auto-wrapped
+ * (same invariant the editor enforces on drop).
  */
 function meraki_builder_sanitize_tree( $tree ) {
 	$clean = meraki_builder_sanitize_node( $tree, 0 );
 	if ( ! $clean || 'container' !== $clean['type'] ) {
 		return null;
 	}
+
+	$children = array();
+	foreach ( $clean['children'] as $child ) {
+		if ( 'container' !== $child['type'] ) {
+			$child = array(
+				'id'       => substr( md5( wp_rand() . microtime() ), 0, 6 ),
+				'type'     => 'container',
+				'props'    => array(
+					'direction' => 'column',
+					'gap'       => 'md',
+					'width'     => 'full',
+				),
+				'css'      => '',
+				'children' => array( $child ),
+			);
+		}
+		$children[] = $child;
+	}
+	$clean['children'] = $children;
+
+	// The root is the page, not a section: it never constrains width.
+	// Sections (root children) decide their own width.
+	$clean['props']['width'] = 'full';
+
 	return $clean;
 }

@@ -75,12 +75,15 @@ function meraki_builder_render_node( $node, $depth ) {
 	$props = isset( $node['props'] ) ? (array) $node['props'] : array();
 
 	if ( 'container' === $node['type'] ) {
+		// Depth 0 is the page root: always full width, regardless of
+		// stored props (pre-0.1.1 trees carry width=contained there).
+		$width   = 0 === $depth ? 'full' : ( 'full' === ( $props['width'] ?? '' ) ? 'full' : 'contained' );
 		$classes = array(
 			'm-' . $id,
 			'mb-container',
 			'mb-' . ( 'row' === ( $props['direction'] ?? '' ) ? 'row' : 'column' ),
 			'mb-gap-' . ( in_array( $props['gap'] ?? '', array( 'none', 'sm', 'md', 'lg' ), true ) ? $props['gap'] : 'md' ),
-			'mb-' . ( 'full' === ( $props['width'] ?? '' ) ? 'full' : 'contained' ),
+			'mb-' . $width,
 		);
 
 		$inner = '';

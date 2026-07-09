@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-10
+
+### Added
+
+- Persistent drop zone below the last root-level row: dropping there
+  always creates a new root-level section, never nests.
+- Clear insertion indicators between root-level containers while dragging.
+
+### Changed
+
+- Only containers live at canvas root: dropping any other widget at root
+  auto-wraps it in a new container (one drop, both created). Enforced
+  server-side on save as well.
+- New containers default to full width — the outer container is the
+  section band, a nested contained container wraps content. Existing
+  saved trees are untouched.
+- Wider edge zones when dragging (28px nested, 40px at root): landing as
+  a sibling is now the easy gesture, nesting the deliberate one.
+
 ## [0.1.0] - 2026-07-10
 
 ### Added
@@ -29,5 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scrubbing, depth cap, capability + nonce checks on save.
 - Self-hosted updates via plugin-update-checker pointed at PROJEC+ MERAKI.
 
-[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/meraki8/meraki-builder/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/meraki8/meraki-builder/releases/tag/v0.1.0
