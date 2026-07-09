@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-10
+
+### Added
+
+- Elements tree panel (left sidebar, below the palette): full hierarchy
+  with expand/collapse, text previews, two-way selection sync with the
+  canvas, hover highlighting, per-row delete, and drag-reorder using the
+  same DnD rules as the canvas — except the tree never auto-wraps:
+  root-level non-container drops are rejected with feedback.
+- Undo/redo: history over the immutable tree (add/delete/move/prop/css),
+  text typing coalesced per field, toolbar buttons plus Cmd/Ctrl+Z,
+  Shift+Cmd/Ctrl+Z and Ctrl+Y, capped at 100 steps, selection restored
+  with each step. Session-only; saving is not a history event.
+- Container padding prop (none/sm/md/lg, default none) mapped to the
+  theme's spacing tokens — the only front-end change; existing pages
+  render exactly as before.
+
 ## [0.1.2] - 2026-07-10
 
 ### Changed
@@ -62,7 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scrubbing, depth cap, capability + nonce checks on save.
 - Self-hosted updates via plugin-update-checker pointed at PROJEC+ MERAKI.
 
-[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/meraki8/meraki-builder/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/meraki8/meraki-builder/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/meraki8/meraki-builder/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/meraki8/meraki-builder/releases/tag/v0.1.0

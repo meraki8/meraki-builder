@@ -31,6 +31,18 @@
 	gap: var(--space-xl, 2.5rem);
 }
 
+.mb-pad-sm {
+	padding: var(--space-s, 0.5rem);
+}
+
+.mb-pad-md {
+	padding: var(--space-m, 1rem);
+}
+
+.mb-pad-lg {
+	padding: var(--space-xl, 2.5rem);
+}
+
 .mb-contained {
 	width: min(var(--content-width, 70ch), 100%);
 	margin-left: auto;

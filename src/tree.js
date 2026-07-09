@@ -7,7 +7,7 @@ export const WIDGETS = {
 		label: "Container",
 		// GenerateBlocks-style: the outer container is a full-width section
 		// band; content wrapping comes from nesting a contained container.
-		defaults: { direction: "column", gap: "md", width: "full" },
+		defaults: { direction: "column", gap: "md", width: "full", padding: "none" },
 	},
 	text: {
 		label: "Text",

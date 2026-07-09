@@ -18,6 +18,7 @@ function meraki_builder_widget_schema() {
 			'direction' => array( 'column', 'row' ),
 			'gap'       => array( 'md', 'none', 'sm', 'lg' ),
 			'width'     => array( 'full', 'contained' ),
+			'padding'   => array( 'none', 'sm', 'md', 'lg' ),
 		),
 		'text'      => array(
 			'tag'     => array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p' ),
@@ -124,6 +125,7 @@ function meraki_builder_sanitize_tree( $tree ) {
 					'direction' => 'column',
 					'gap'       => 'md',
 					'width'     => 'full',
+					'padding'   => 'none',
 				),
 				'css'      => '',
 				'children' => array( $child ),

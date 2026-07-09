@@ -86,6 +86,10 @@ function meraki_builder_render_node( $node, $depth ) {
 			'mb-' . $width,
 		);
 
+		if ( in_array( $props['padding'] ?? 'none', array( 'sm', 'md', 'lg' ), true ) ) {
+			$classes[] = 'mb-pad-' . $props['padding'];
+		}
+
 		$inner = '';
 		if ( ! empty( $node['children'] ) && is_array( $node['children'] ) ) {
 			foreach ( $node['children'] as $child ) {
