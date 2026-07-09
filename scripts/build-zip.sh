@@ -15,20 +15,27 @@ fi
 rm -rf build
 mkdir -p build/meraki-builder
 
+# Excludes are anchored to the repo root — a bare 'build' would also
+# strip editor/build/, which is the compiled editor bundle.
 rsync -a \
-	--exclude '.git' \
-	--exclude '.github' \
-	--exclude '.gitignore' \
-	--exclude 'build' \
-	--exclude 'node_modules' \
-	--exclude 'src' \
-	--exclude 'scripts' \
-	--exclude 'package.json' \
-	--exclude 'package-lock.json' \
-	--exclude 'CHANGELOG.md' \
-	--exclude 'README.md' \
+	--exclude '/.git' \
+	--exclude '/.github' \
+	--exclude '/.gitignore' \
+	--exclude '/build' \
+	--exclude '/node_modules' \
+	--exclude '/src' \
+	--exclude '/scripts' \
+	--exclude '/package.json' \
+	--exclude '/package-lock.json' \
+	--exclude '/CHANGELOG.md' \
+	--exclude '/README.md' \
 	--exclude '.DS_Store' \
 	./ build/meraki-builder/
+
+if [ ! -f build/meraki-builder/editor/build/editor.js ]; then
+	echo "staged zip is missing the editor bundle" >&2
+	exit 1
+fi
 
 (cd build && zip -rq meraki-builder.zip meraki-builder)
 
