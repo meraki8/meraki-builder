@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-07-10
+
+### Changed
+
+- Canvas affordance pass (editor-only, zero front-end changes): hover and
+  selection now show an Elementor-style handle bar (type label, drag grip,
+  add-sibling-container, delete) on the innermost hovered node; containers
+  get accent hover outlines.
+- Clear visual hierarchy: quiet inner "Drop widgets here" hint for empty
+  containers vs a distinct page-level "+ Add Section" appender (click to
+  add a section; still the same root-level drop target).
+- Insertion indicator is thicker with end caps, unmistakable against
+  hover outlines.
+
 ## [0.1.1] - 2026-07-10
 
 ### Added
@@ -48,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scrubbing, depth cap, capability + nonce checks on save.
 - Self-hosted updates via plugin-update-checker pointed at PROJEC+ MERAKI.
 
-[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/meraki8/meraki-builder/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/meraki8/meraki-builder/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/meraki8/meraki-builder/releases/tag/v0.1.0

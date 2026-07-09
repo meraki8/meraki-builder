@@ -206,8 +206,10 @@
 	transition: outline-color 120ms;
 }
 
-.mb-canvas .mb-container:hover {
-	outline-color: var(--color-border, #e3ded4);
+/* JS-driven hover (innermost node only) — accent, distinct from selection */
+.mb-canvas .mb-node.is-hovered {
+	outline: 1px solid var(--color-accent, #9c4221);
+	outline-offset: -1px;
 }
 
 .mb-canvas .mb-node.is-selected {
@@ -219,38 +221,116 @@
 	opacity: 0.4;
 }
 
-.mb-canvas .mb-node:not(.mb-container):hover {
-	outline: 1px solid var(--color-border, #d8cfc0);
-	outline-offset: -1px;
+/* Elementor-style handle bar: small tab at the node's top center */
+.mb-handlebar {
+	position: absolute;
+	top: 0;
+	left: 50%;
+	transform: translate(-50%, -100%);
+	display: flex;
+	align-items: center;
+	gap: 1px;
+	height: 22px;
+	padding: 0 5px;
+	background: var(--color-accent, #9c4221);
+	color: #fff;
+	border-radius: 5px 5px 0 0;
+	font-family: var(--font-body, sans-serif);
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1;
+	white-space: nowrap;
+	z-index: 30;
+	cursor: grab;
+	user-select: none;
+	box-shadow: 0 -1px 4px rgba(35, 32, 28, 0.15);
 }
 
+.mb-hb-grip {
+	font-size: 10px;
+	padding: 0 3px 0 1px;
+	opacity: 0.85;
+	letter-spacing: -1px;
+}
+
+.mb-hb-label {
+	text-transform: uppercase;
+	font-size: 9px;
+	letter-spacing: 0.06em;
+	margin-right: 3px;
+	opacity: 0.95;
+}
+
+.mb-app .mb-handlebar button {
+	background: none;
+	border: 0;
+	color: #fff;
+	font: inherit;
+	font-size: 13px;
+	line-height: 1;
+	padding: 3px 5px;
+	border-radius: 3px;
+	cursor: pointer;
+}
+
+.mb-app .mb-handlebar button:hover {
+	background: rgba(255, 255, 255, 0.28);
+	color: #fff;
+}
+
+/* Tier 2: the empty-container hint — quiet, compact, clearly INSIDE */
 .mb-empty {
+	margin: 3px;
 	border: 1px dashed var(--color-border, #d8cfc0);
 	border-radius: 4px;
 	color: var(--color-muted, #5e574c);
-	font-size: 0.8125rem;
+	opacity: 0.75;
+	font-size: 0.72rem;
+	letter-spacing: 0.02em;
 	text-align: center;
-	padding: 1rem;
+	padding: 0.55rem;
 	pointer-events: none;
 }
 
-/* Persistent drop area after the last root-level row: dropping here
-   always creates a new root-level section, never nests. */
-.mb-bottom-zone {
-	margin: 1rem 0.25rem 0;
-	border: 1px dashed var(--color-border, #d8cfc0);
-	border-radius: 6px;
-	color: var(--color-muted, #5e574c);
-	font-size: 0.8125rem;
-	text-align: center;
-	padding: 1.5rem 1rem;
-	transition: border-color 120ms, background 120ms;
+/* Tier 3: the page appender — a page-level CONTROL, not a container.
+   Solid button styling; still the permanent root-append drop target. */
+.mb-app .mb-appender {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.45rem;
+	width: 100%;
+	margin: 1.5rem 0 0;
+	padding: 0.85rem;
+	background: #fff;
+	border: 1px solid var(--color-border, #e3ded4);
+	border-radius: 8px;
+	box-shadow: 0 1px 2px rgba(35, 32, 28, 0.06);
+	color: var(--color-accent, #9c4221);
+	font: inherit;
+	font-size: 0.85rem;
+	font-weight: 650;
+	cursor: pointer;
+	transition: border-color 120ms, background 120ms, box-shadow 120ms;
 }
 
-.mb-bottom-zone.is-over {
+.mb-appender-plus {
+	display: inline-grid;
+	place-items: center;
+	width: 1.15rem;
+	height: 1.15rem;
+	border-radius: 50%;
+	background: var(--color-accent, #9c4221);
+	color: #fff;
+	font-size: 0.85rem;
+	line-height: 1;
+}
+
+.mb-app .mb-appender:hover,
+.mb-app .mb-appender.is-over {
 	border-color: var(--color-accent, #9c4221);
-	background: rgba(156, 66, 33, 0.06);
-	color: var(--color-accent, #9c4221);
+	background: rgba(156, 66, 33, 0.05);
+	color: var(--color-accent-dark, #7f3116);
 }
 
 /* ------------------------------------------------------------------ dnd */
@@ -261,6 +341,46 @@
 	z-index: 40;
 	pointer-events: none;
 	box-shadow: 0 0 0 1px rgba(250, 248, 245, 0.9);
+}
+
+/* End caps: unmistakably a drop position, never a hover outline */
+.mb-indicator::before,
+.mb-indicator::after {
+	content: "";
+	position: absolute;
+	background: var(--color-accent, #9c4221);
+	border-radius: 2px;
+	box-shadow: 0 0 0 1px rgba(250, 248, 245, 0.9);
+}
+
+.mb-indicator-h::before,
+.mb-indicator-h::after {
+	width: 3px;
+	height: 11px;
+	top: -4px;
+}
+
+.mb-indicator-h::before {
+	left: -1px;
+}
+
+.mb-indicator-h::after {
+	right: -1px;
+}
+
+.mb-indicator-v::before,
+.mb-indicator-v::after {
+	height: 3px;
+	width: 11px;
+	left: -4px;
+}
+
+.mb-indicator-v::before {
+	top: -1px;
+}
+
+.mb-indicator-v::after {
+	bottom: -1px;
 }
 
 .mb-drag-chip {

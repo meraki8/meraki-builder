@@ -101,6 +101,7 @@ function App() {
 
 	const [active, setActive] = useState(null); // { kind, widgetType?, nodeId? }
 	const [target, setTarget] = useState(null); // { parentId, index, line }
+	const [hoveredId, setHoveredId] = useState(null);
 	const [tab, setTab] = useState("block");
 	const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
 
@@ -116,6 +117,22 @@ function App() {
 	const registerEl = useCallback((id, el) => {
 		if (el) nodeEls.current.set(id, el);
 		else nodeEls.current.delete(id);
+	}, []);
+
+	// Handle-bar "+": one click, one empty sibling container right after
+	// this node (inside the same parent — sibling, never root-hoisted).
+	const addSiblingAfter = useCallback((nodeId) => {
+		const t = treeRef.current;
+		const parent = findParent(t, nodeId);
+		if (!parent) return;
+		const idx = parent.children.findIndex((c) => c.id === nodeId);
+		dispatch({ type: "insert", parentId: parent.id, index: idx + 1, node: createNode("container") });
+	}, []);
+
+	// Page appender: one empty full-width section at the end of the page.
+	const addSection = useCallback(() => {
+		const t = treeRef.current;
+		dispatch({ type: "insert", parentId: t.id, index: t.children.length, node: createNode("container") });
 	}, []);
 
 	const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -178,8 +195,8 @@ function App() {
 		let line;
 		if (!kids.length) {
 			line = row
-				? { x: rect.left + pad, y: rect.top + pad, w: 2, h: rect.height - pad * 2 }
-				: { x: rect.left + pad, y: rect.top + pad, w: rect.width - pad * 2, h: 2 };
+				? { x: rect.left + pad, y: rect.top + pad, w: 3, h: rect.height - pad * 2 }
+				: { x: rect.left + pad, y: rect.top + pad, w: rect.width - pad * 2, h: 3 };
 		} else if (row) {
 			const x =
 				index === 0
@@ -187,7 +204,7 @@ function App() {
 					: index === kids.length
 					? kids[kids.length - 1].rect.right + 1
 					: (kids[index - 1].rect.right + kids[index].rect.left) / 2;
-			line = { x, y: rect.top + pad, w: 2, h: rect.height - pad * 2 };
+			line = { x, y: rect.top + pad, w: 3, h: rect.height - pad * 2 };
 		} else {
 			const y =
 				index === 0
@@ -195,7 +212,7 @@ function App() {
 					: index === kids.length
 					? kids[kids.length - 1].rect.bottom + 1
 					: (kids[index - 1].rect.bottom + kids[index].rect.top) / 2;
-			line = { x: rect.left + pad, y, w: rect.width - pad * 2, h: 2 };
+			line = { x: rect.left + pad, y, w: rect.width - pad * 2, h: 3 };
 		}
 
 		return { parentId: containerId, index, line };
@@ -216,7 +233,7 @@ function App() {
 				const el = nodeEls.current.get(BOTTOM_ZONE);
 				if (!el) return null;
 				const r = el.getBoundingClientRect();
-				return { parentId: t.id, index: t.children.length, line: { x: r.left + 6, y: r.top + 6, w: r.width - 12, h: 2 } };
+				return { parentId: t.id, index: t.children.length, line: { x: r.left + 6, y: r.top + 6, w: r.width - 12, h: 3 } };
 			}
 
 			const parent = findParent(t, overId);
@@ -364,7 +381,12 @@ function App() {
 						</div>
 					</aside>
 
-					<div className="mb-canvas" data-testid="canvas" onClick={() => dispatch({ type: "select", id: null })}>
+					<div
+						className="mb-canvas"
+						data-testid="canvas"
+						onClick={() => dispatch({ type: "select", id: null })}
+						onPointerLeave={() => setHoveredId(null)}
+					>
 						<main className="site-main mb-canvas-main">
 							<article>
 								<div className="entry-content">
@@ -372,10 +394,14 @@ function App() {
 										node={tree}
 										rootId={tree.id}
 										selectedId={selectedId}
+										hoveredId={hoveredId}
+										dragActive={!!active}
+										onHover={setHoveredId}
+										addSiblingAfter={addSiblingAfter}
 										dispatch={dispatch}
 										registerEl={registerEl}
 									/>
-									<BottomZone registerEl={registerEl} />
+									<BottomZone registerEl={registerEl} onAddSection={addSection} />
 								</div>
 							</article>
 						</main>
@@ -401,7 +427,7 @@ function App() {
 
 			{target && active && (
 				<div
-					className="mb-indicator"
+					className={"mb-indicator " + (target.line.w >= target.line.h ? "mb-indicator-h" : "mb-indicator-v")}
 					data-testid="indicator"
 					style={{ left: target.line.x, top: target.line.y, width: target.line.w, height: target.line.h }}
 				/>
@@ -440,20 +466,65 @@ function PaletteItem({ type, label }) {
 
 /* ---------------------------------------------------------------- canvas */
 
-function BottomZone({ registerEl }) {
+function BottomZone({ registerEl, onAddSection }) {
 	const { setNodeRef, isOver } = useDroppable({ id: BOTTOM_ZONE });
 	const ref = (el) => {
 		setNodeRef(el);
 		registerEl(BOTTOM_ZONE, el);
 	};
 	return (
-		<div ref={ref} className={"mb-bottom-zone" + (isOver ? " is-over" : "")} data-testid="bottom-zone">
-			Drag a widget here
+		<button
+			type="button"
+			ref={ref}
+			className={"mb-appender" + (isOver ? " is-over" : "")}
+			data-testid="bottom-zone"
+			onClick={(e) => {
+				e.stopPropagation();
+				onAddSection();
+			}}
+		>
+			<span className="mb-appender-plus" aria-hidden="true">+</span> Add Section
+		</button>
+	);
+}
+
+function HandleBar({ node, isContainer, onAddSibling, onDelete }) {
+	const stop = (e) => e.stopPropagation();
+	return (
+		<div className="mb-handlebar" data-testid={"handlebar-" + node.id}>
+			<span className="mb-hb-grip" aria-hidden="true" title="Drag to move">⠿</span>
+			<span className="mb-hb-label">{isContainer ? "Container" : "Text"}</span>
+			{isContainer && (
+				<button
+					type="button"
+					title="Add sibling container after"
+					data-testid="hb-add"
+					onPointerDown={stop}
+					onClick={(e) => {
+						stop(e);
+						onAddSibling();
+					}}
+				>
+					+
+				</button>
+			)}
+			<button
+				type="button"
+				title="Delete"
+				data-testid="hb-delete"
+				onPointerDown={stop}
+				onClick={(e) => {
+					stop(e);
+					onDelete();
+				}}
+			>
+				×
+			</button>
 		</div>
 	);
 }
 
-function NodeView({ node, rootId, selectedId, dispatch, registerEl }) {
+function NodeView({ node, rootId, selectedId, hoveredId, dragActive, onHover, addSiblingAfter, dispatch, registerEl }) {
 	const isRoot = node.id === rootId;
 	const isContainer = node.type === "container";
 
@@ -475,8 +546,30 @@ function NodeView({ node, rootId, selectedId, dispatch, registerEl }) {
 		dispatch({ type: "select", id: node.id });
 	};
 
+	// Innermost-only hover: children stop propagation so only the deepest
+	// node under the pointer carries the affordances.
+	const onPointerOver = (e) => {
+		e.stopPropagation();
+		onHover(isRoot ? null : node.id);
+	};
+
+	const showBar = !isRoot && !dragActive && (hoveredId === node.id || selectedId === node.id);
+	const bar = showBar && (
+		<HandleBar
+			node={node}
+			isContainer={isContainer}
+			onAddSibling={() => addSiblingAfter(node.id)}
+			onDelete={() => dispatch({ type: "delete", id: node.id })}
+		/>
+	);
+
 	const editorCls =
-		"mb-node" + (selectedId === node.id ? " is-selected" : "") + (isDragging ? " is-ghost" : "");
+		"mb-node" +
+		(selectedId === node.id ? " is-selected" : "") +
+		(!isRoot && hoveredId === node.id && !dragActive ? " is-hovered" : "") +
+		(isDragging ? " is-ghost" : "");
+
+	const childProps = { rootId, selectedId, hoveredId, dragActive, onHover, addSiblingAfter, dispatch, registerEl };
 
 	if (isContainer) {
 		const p = node.props;
@@ -484,11 +577,10 @@ function NodeView({ node, rootId, selectedId, dispatch, registerEl }) {
 		const width = isRoot ? "full" : p.width === "full" ? "full" : "contained";
 		const cls = `${editorCls} m-${node.id} mb-container mb-${p.direction === "row" ? "row" : "column"} mb-gap-${p.gap} mb-${width}`;
 		return (
-			<div ref={ref} className={cls} data-mbid={node.id} onClick={onClick} {...listeners} {...attributes}>
+			<div ref={ref} className={cls} data-mbid={node.id} onClick={onClick} onPointerOver={onPointerOver} {...listeners} {...attributes}>
+				{bar}
 				{node.children.length ? (
-					node.children.map((child) => (
-						<NodeView key={child.id} node={child} rootId={rootId} selectedId={selectedId} dispatch={dispatch} registerEl={registerEl} />
-					))
+					node.children.map((child) => <NodeView key={child.id} node={child} {...childProps} />)
 				) : isRoot ? null : (
 					<div className="mb-empty">Drop widgets here</div>
 				)}
@@ -498,7 +590,8 @@ function NodeView({ node, rootId, selectedId, dispatch, registerEl }) {
 
 	const Tag = node.props.tag || "p";
 	return (
-		<Tag ref={ref} className={`${editorCls} m-${node.id}`} data-mbid={node.id} onClick={onClick} {...listeners} {...attributes}>
+		<Tag ref={ref} className={`${editorCls} m-${node.id}`} data-mbid={node.id} onClick={onClick} onPointerOver={onPointerOver} {...listeners} {...attributes}>
+			{bar}
 			{node.props.content}
 		</Tag>
 	);
