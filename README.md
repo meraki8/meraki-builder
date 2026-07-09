@@ -38,6 +38,12 @@ npm run build   # bundles src/ -> editor/build/editor.js
    plugin into a folder named exactly `meraki-builder` (the folder name is
    the plugin's identity — never version it), and attaches
    `meraki-builder.zip` to a GitHub Release.
+3. **Confirm consumption on a real wp-admin** (same routine as the theme):
+   on a WordPress install running the previous version, force an update
+   check — the update notice must appear with no `puc-invalid-metadata`
+   error, and one-click update must complete. "The endpoint serves JSON"
+   is not sufficient proof; the plugin and theme metadata schemas differ
+   and only wp-admin exercises the real parser.
 
 Latest zip: `https://github.com/meraki8/meraki-builder/releases/latest/download/meraki-builder.zip`
 Update endpoint: `https://projec-meraki-app-production.up.railway.app/updates/meraki-builder.json`
