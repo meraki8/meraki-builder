@@ -1,0 +1,46 @@
+/* Meraki Builder layout classes. Values lean on the Meraki theme's
+   design tokens with plain fallbacks; no other CSS ships. */
+
+.mb-container {
+	display: flex;
+	min-width: 0;
+}
+
+.mb-column {
+	flex-direction: column;
+}
+
+.mb-row {
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+
+.mb-row > .mb-container {
+	flex: 1 1 18rem;
+}
+
+.mb-gap-sm {
+	gap: var(--space-s, 0.5rem);
+}
+
+.mb-gap-md {
+	gap: var(--space-m, 1rem);
+}
+
+.mb-gap-lg {
+	gap: var(--space-xl, 2.5rem);
+}
+
+.mb-contained {
+	width: min(var(--content-width, 70ch), 100%);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.mb-full {
+	width: 100%;
+}
+
+.mb-container > :is(h1, h2, h3, h4, h5, h6, p) {
+	margin: 0;
+}

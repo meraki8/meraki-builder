@@ -1,0 +1,17 @@
+{
+	"name": "meraki-builder",
+	"version": "0.1.0",
+	"description": "A quiet visual page builder for the Meraki theme.",
+	"scripts": {
+		"build": "esbuild src/index.jsx --bundle --minify --outfile=editor/build/editor.js --jsx=automatic --define:process.env.NODE_ENV=\\\"production\\\" --log-level=warning"
+	},
+	"dependencies": {
+		"@dnd-kit/core": "6.3.1",
+		"react": "19.2.7",
+		"react-dom": "19.2.7"
+	},
+	"devDependencies": {
+		"esbuild": "0.28.1"
+	},
+	"private": true
+}

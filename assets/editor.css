@@ -1,0 +1,340 @@
+/* Meraki Builder editor chrome. The theme stylesheet is loaded in this
+   document so the canvas matches the front end; panel styles below are
+   deliberately specific so theme element styles can't disturb them. */
+
+.mb-editor-body {
+	margin: 0;
+	overflow: hidden;
+}
+
+.mb-app {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+	font-size: 0.875rem;
+}
+
+/* ---------------------------------------------------------------- topbar */
+.mb-topbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	height: 48px;
+	padding: 0 0.75rem 0 1rem;
+	background: var(--color-text, #23201c);
+	color: var(--color-bg, #faf8f5);
+	flex-shrink: 0;
+}
+
+.mb-topbar-brand {
+	display: flex;
+	align-items: baseline;
+	gap: 0.75rem;
+	font-family: var(--font-display, Georgia, serif);
+	font-size: 1rem;
+}
+
+.mb-topbar-title {
+	font-family: var(--font-body, sans-serif);
+	font-size: 0.8125rem;
+	opacity: 0.7;
+}
+
+.mb-topbar-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.mb-save-note {
+	font-size: 0.75rem;
+	opacity: 0.7;
+}
+
+.mb-save-error {
+	color: #ff9b7b;
+	opacity: 1;
+}
+
+/* --------------------------------------------------------------- buttons */
+.mb-app .mb-btn {
+	font: inherit;
+	font-weight: 600;
+	border: 0;
+	border-radius: 5px;
+	padding: 0.45em 1em;
+	cursor: pointer;
+	text-decoration: none;
+	background: transparent;
+	color: inherit;
+}
+
+.mb-app .mb-btn-primary {
+	background: var(--color-accent, #9c4221);
+	color: #fff;
+}
+
+.mb-app .mb-btn-primary:hover {
+	background: var(--color-accent-dark, #7f3116);
+	color: #fff;
+}
+
+.mb-app .mb-btn-quiet {
+	font-size: 1rem;
+	line-height: 1;
+	padding: 0.45em 0.6em;
+	color: inherit;
+	background: transparent;
+}
+
+.mb-app .mb-btn-quiet:hover {
+	background: rgba(255, 255, 255, 0.12);
+	color: inherit;
+}
+
+.mb-app .mb-btn-danger {
+	background: transparent;
+	color: #a03015;
+	box-shadow: inset 0 0 0 1px #d8a08e;
+	width: 100%;
+	margin-top: 1rem;
+}
+
+.mb-app .mb-btn-danger:hover {
+	background: #a03015;
+	color: #fff;
+}
+
+/* ----------------------------------------------------------------- body */
+.mb-body {
+	display: flex;
+	flex: 1;
+	min-height: 0;
+}
+
+.mb-panel {
+	background: #fff;
+	width: 280px;
+	flex-shrink: 0;
+	overflow-y: auto;
+	padding: 1rem;
+}
+
+.mb-left {
+	border-right: 1px solid var(--color-border, #e3ded4);
+}
+
+.mb-right {
+	border-left: 1px solid var(--color-border, #e3ded4);
+	width: 300px;
+	padding: 0;
+}
+
+.mb-app .mb-panel-heading {
+	font-family: var(--font-body, sans-serif);
+	font-size: 0.75rem;
+	font-weight: 650;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--color-muted, #5e574c);
+	margin: 0 0 0.75rem;
+	line-height: 1.4;
+}
+
+/* --------------------------------------------------------------- palette */
+.mb-palette {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.5rem;
+}
+
+.mb-widget-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.9rem 0.5rem;
+	border: 1px solid var(--color-border, #e3ded4);
+	border-radius: 6px;
+	background: var(--color-bg, #faf8f5);
+	cursor: grab;
+	user-select: none;
+	font-weight: 500;
+	touch-action: none;
+}
+
+.mb-widget-card:hover {
+	border-color: var(--color-accent, #9c4221);
+	color: var(--color-accent, #9c4221);
+}
+
+.mb-widget-icon {
+	font-size: 1.25rem;
+	line-height: 1;
+}
+
+/* ---------------------------------------------------------------- canvas */
+.mb-canvas {
+	flex: 1;
+	min-width: 0;
+	overflow: auto;
+	background: var(--color-surface, #f2eee7);
+	padding: 1.5rem;
+}
+
+.mb-canvas-main {
+	background: var(--color-bg, #faf8f5);
+	border: 1px solid var(--color-border, #e3ded4);
+	border-radius: 8px;
+	box-shadow: 0 1px 3px rgba(35, 32, 28, 0.07);
+	min-height: calc(100vh - 48px - 3rem);
+	max-width: none;
+	padding: 1.25rem 0;
+	margin: 0;
+}
+
+.mb-node {
+	position: relative;
+	touch-action: none;
+}
+
+.mb-canvas .mb-container {
+	min-height: 2.5rem;
+	outline: 1px dashed transparent;
+	outline-offset: -1px;
+	padding: 0.25rem;
+	transition: outline-color 120ms;
+}
+
+.mb-canvas .mb-container:hover {
+	outline-color: var(--color-border, #e3ded4);
+}
+
+.mb-canvas .mb-node.is-selected {
+	outline: 2px solid var(--color-accent, #9c4221);
+	outline-offset: -2px;
+}
+
+.mb-canvas .mb-node.is-ghost {
+	opacity: 0.4;
+}
+
+.mb-canvas .mb-node:not(.mb-container):hover {
+	outline: 1px solid var(--color-border, #d8cfc0);
+	outline-offset: -1px;
+}
+
+.mb-empty {
+	border: 1px dashed var(--color-border, #d8cfc0);
+	border-radius: 4px;
+	color: var(--color-muted, #5e574c);
+	font-size: 0.8125rem;
+	text-align: center;
+	padding: 1rem;
+	pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ dnd */
+.mb-indicator {
+	position: fixed;
+	background: var(--color-accent, #9c4221);
+	border-radius: 2px;
+	z-index: 40;
+	pointer-events: none;
+	box-shadow: 0 0 0 1px rgba(250, 248, 245, 0.9);
+}
+
+.mb-drag-chip {
+	display: inline-block;
+	padding: 0.4em 0.9em;
+	background: #fff;
+	border: 2px solid var(--color-accent, #9c4221);
+	border-radius: 6px;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--color-text, #23201c);
+	box-shadow: 0 4px 14px rgba(35, 32, 28, 0.18);
+	cursor: grabbing;
+}
+
+.mb-drag-chip.is-invalid {
+	border-color: #b3261e;
+	border-style: dashed;
+	color: #b3261e;
+	opacity: 0.9;
+}
+
+/* -------------------------------------------------------------- inspector */
+.mb-tabs {
+	display: flex;
+	border-bottom: 1px solid var(--color-border, #e3ded4);
+	position: sticky;
+	top: 0;
+	background: #fff;
+	z-index: 2;
+}
+
+.mb-app .mb-tabs button {
+	flex: 1;
+	font: inherit;
+	font-weight: 600;
+	padding: 0.7em 0;
+	background: transparent;
+	color: var(--color-muted, #5e574c);
+	border: 0;
+	border-bottom: 2px solid transparent;
+	border-radius: 0;
+	cursor: pointer;
+}
+
+.mb-app .mb-tabs button.is-active {
+	color: var(--color-accent, #9c4221);
+	border-bottom-color: var(--color-accent, #9c4221);
+}
+
+.mb-inspector,
+.mb-empty-state {
+	padding: 1rem;
+}
+
+.mb-empty-state p {
+	color: var(--color-muted, #5e574c);
+	font-size: 0.8125rem;
+}
+
+.mb-field {
+	display: block;
+	margin-bottom: 0.9rem;
+}
+
+.mb-field-label {
+	display: block;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--color-muted, #5e574c);
+	margin-bottom: 0.3rem;
+}
+
+.mb-app .mb-field select,
+.mb-app .mb-field input,
+.mb-app .mb-field textarea {
+	width: 100%;
+	font: inherit;
+	color: inherit;
+	background: #fff;
+	border: 1px solid var(--color-border, #e3ded4);
+	border-radius: 5px;
+	padding: 0.4em 0.6em;
+	box-sizing: border-box;
+}
+
+.mb-app .mb-field textarea[name="css"] {
+	font-family: var(--font-mono, monospace);
+	font-size: 0.75rem;
+}
+
+.mb-hint {
+	font-size: 0.7rem;
+	color: var(--color-muted, #5e574c);
+	margin: -0.4rem 0 0.9rem;
+}
