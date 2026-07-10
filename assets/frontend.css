@@ -10,6 +10,15 @@
 	flex-direction: column;
 }
 
+/* Layout types: flex is the .mb-container default; these override it. */
+.mb-div {
+	display: block;
+}
+
+.mb-grid {
+	display: grid;
+}
+
 .mb-row {
 	flex-direction: row;
 	flex-wrap: wrap;

@@ -75,16 +75,24 @@ function meraki_builder_render_node( $node, $depth ) {
 	$props = isset( $node['props'] ) ? (array) $node['props'] : array();
 
 	if ( 'container' === $node['type'] ) {
-		// Depth 0 is the page root: always full width, regardless of
-		// stored props (pre-0.1.1 trees carry width=contained there).
-		$width   = 0 === $depth ? 'full' : ( 'full' === ( $props['width'] ?? '' ) ? 'full' : 'contained' );
-		$classes = array(
-			'm-' . $id,
-			'mb-container',
-			'mb-' . ( 'row' === ( $props['direction'] ?? '' ) ? 'row' : 'column' ),
-			'mb-gap-' . ( in_array( $props['gap'] ?? '', array( 'none', 'sm', 'md', 'lg' ), true ) ? $props['gap'] : 'md' ),
-			'mb-' . $width,
-		);
+		// Depth 0 is the page root: always full width and always flex,
+		// regardless of stored props (pre-0.1.1 trees carry width=contained).
+		$width  = 0 === $depth ? 'full' : ( 'full' === ( $props['width'] ?? '' ) ? 'full' : 'contained' );
+		$gap    = in_array( $props['gap'] ?? '', array( 'none', 'sm', 'md', 'lg' ), true ) ? $props['gap'] : 'md';
+		// Absent layout = flex (pre-0.3.0 trees) — emits exactly the legacy classes.
+		$layout = ( 0 !== $depth && in_array( $props['layout'] ?? '', array( 'div', 'grid' ), true ) ) ? $props['layout'] : 'flex';
+
+		$classes = array( 'm-' . $id, 'mb-container' );
+		if ( 'flex' === $layout ) {
+			$classes[] = 'mb-' . ( 'row' === ( $props['direction'] ?? '' ) ? 'row' : 'column' );
+			$classes[] = 'mb-gap-' . $gap;
+		} elseif ( 'grid' === $layout ) {
+			$classes[] = 'mb-grid';
+			$classes[] = 'mb-gap-' . $gap;
+		} else {
+			$classes[] = 'mb-div';
+		}
+		$classes[] = 'mb-' . $width;
 
 		if ( in_array( $props['padding'] ?? 'none', array( 'sm', 'md', 'lg' ), true ) ) {
 			$classes[] = 'mb-pad-' . $props['padding'];

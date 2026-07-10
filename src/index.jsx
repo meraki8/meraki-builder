@@ -838,7 +838,15 @@ function NodeView({ node, rootId, selectedId, hoveredId, dragActive, onHover, ad
 		// The root is the page, never a width-constraining section.
 		const width = isRoot ? "full" : p.width === "full" ? "full" : "contained";
 		const pad = p.padding && p.padding !== "none" ? ` mb-pad-${p.padding}` : "";
-		const cls = `${editorCls} m-${node.id} mb-container mb-${p.direction === "row" ? "row" : "column"} mb-gap-${p.gap} mb-${width}${pad}`;
+		// Absent layout = flex (pre-0.3.0 trees) — emits exactly the legacy classes.
+		const layout = !isRoot && (p.layout === "div" || p.layout === "grid") ? p.layout : "flex";
+		const layoutCls =
+			layout === "flex"
+				? ` mb-${p.direction === "row" ? "row" : "column"} mb-gap-${p.gap}`
+				: layout === "grid"
+				? ` mb-grid mb-gap-${p.gap}`
+				: " mb-div";
+		const cls = `${editorCls} m-${node.id} mb-container${layoutCls} mb-${width}${pad}`;
 		return (
 			<div ref={ref} className={cls} data-mbid={node.id} onClick={onClick} onPointerOver={onPointerOver} {...listeners} {...attributes}>
 				{bar}
@@ -860,7 +868,94 @@ function NodeView({ node, rootId, selectedId, hoveredId, dragActive, onHover, ad
 	);
 }
 
-/* -------------------------------------------------------------- inspector */
+/* ------------------------------------------------------------------ icons */
+
+const I = (paths) => (
+	<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+		{paths}
+	</svg>
+);
+const IconBox = () => I(<rect x="3" y="3" width="18" height="18" rx="2" />);
+const IconFlex = () =>
+	I(
+		<>
+			<rect x="3" y="3" width="7" height="18" rx="1" />
+			<rect x="14" y="3" width="7" height="18" rx="1" />
+		</>
+	);
+const IconGrid = () =>
+	I(
+		<>
+			<rect x="3" y="3" width="7" height="7" />
+			<rect x="14" y="3" width="7" height="7" />
+			<rect x="3" y="14" width="7" height="7" />
+			<rect x="14" y="14" width="7" height="7" />
+		</>
+	);
+const IconArrowRight = () =>
+	I(
+		<>
+			<line x1="5" y1="12" x2="19" y2="12" />
+			<polyline points="12 5 19 12 12 19" />
+		</>
+	);
+const IconArrowDown = () =>
+	I(
+		<>
+			<line x1="12" y1="5" x2="12" y2="19" />
+			<polyline points="5 12 12 19 19 12" />
+		</>
+	);
+const IconLayout = () =>
+	I(
+		<>
+			<rect x="3" y="3" width="18" height="18" rx="2" />
+			<line x1="3" y1="9" x2="21" y2="9" />
+			<line x1="9" y1="9" x2="9" y2="21" />
+		</>
+	);
+const IconType = () =>
+	I(
+		<>
+			<polyline points="4 7 4 4 20 4 20 7" />
+			<line x1="9" y1="20" x2="15" y2="20" />
+			<line x1="12" y1="4" x2="12" y2="20" />
+		</>
+	);
+const IconCode = () =>
+	I(
+		<>
+			<polyline points="16 18 22 12 16 6" />
+			<polyline points="8 6 2 12 8 18" />
+		</>
+	);
+
+/* ------------------------------------------------------------ control kit */
+/* GB-style building blocks: collapsible Section (session-remembered),
+   icon segmented control, token select, textarea. Every future control
+   builds from these. */
+
+const sectionMemory = new Map(); // session-only open/closed state
+
+function Section({ id, icon, label, defaultOpen = true, children }) {
+	const [open, setOpen] = useState(() => (sectionMemory.has(id) ? sectionMemory.get(id) : defaultOpen));
+	const toggle = () => {
+		sectionMemory.set(id, !open);
+		setOpen(!open);
+	};
+	return (
+		<div className={"mb-section" + (open ? " is-open" : "")} data-testid={"section-" + id}>
+			<button type="button" className="mb-section-header" data-testid={"section-toggle-" + id} onClick={toggle} aria-expanded={open}>
+				<span className="mb-section-icon">{icon}</span>
+				<span className="mb-section-label">{label}</span>
+				<span className={"mb-section-chevron" + (open ? " is-open" : "")} aria-hidden="true">
+					{I(<polyline points="6 9 12 15 18 9" />)}
+				</span>
+			</button>
+			{open && <div className="mb-section-body">{children}</div>}
+		</div>
+	);
+}
 
 function Field({ label, children }) {
 	return (
@@ -870,6 +965,134 @@ function Field({ label, children }) {
 		</label>
 	);
 }
+
+function SegmentedControl({ label, name, value, options, onChange }) {
+	return (
+		<div className="mb-field">
+			<span className="mb-field-label">{label}</span>
+			<div className="mb-segmented" role="group" aria-label={label} data-name={name}>
+				{options.map((opt) => (
+					<button
+						key={opt.value}
+						type="button"
+						title={opt.title}
+						aria-pressed={value === opt.value}
+						className={value === opt.value ? "is-active" : ""}
+						data-testid={`seg-${name}-${opt.value}`}
+						onClick={() => onChange(opt.value)}
+					>
+						{opt.icon}
+						{opt.text && <span className="mb-seg-text">{opt.text}</span>}
+					</button>
+				))}
+			</div>
+		</div>
+	);
+}
+
+function TokenSelect({ label, name, value, options, onChange }) {
+	return (
+		<Field label={label}>
+			<select name={name} value={value} onChange={(e) => onChange(e.target.value)}>
+				{options.map(([v, text]) => (
+					<option key={v} value={v}>
+						{text}
+					</option>
+				))}
+			</select>
+		</Field>
+	);
+}
+
+/* Sections registered per widget type; future widgets slot in here. */
+
+function ContainerLayoutSection({ node, isRoot, set }) {
+	const layout = node.props.layout === "div" || node.props.layout === "grid" ? node.props.layout : "flex";
+	const GAP_OPTIONS = [
+		["none", "None"],
+		["sm", "Small"],
+		["md", "Medium"],
+		["lg", "Large"],
+	];
+	return (
+		<>
+			{!isRoot && (
+				<SegmentedControl
+					label="Type"
+					name="layout"
+					value={layout}
+					onChange={(v) => set({ layout: v })}
+					options={[
+						{ value: "div", icon: <IconBox />, title: "Div — plain block box" },
+						{ value: "flex", icon: <IconFlex />, title: "Flexbox" },
+						{ value: "grid", icon: <IconGrid />, title: "Grid" },
+					]}
+				/>
+			)}
+			{layout === "flex" && (
+				<SegmentedControl
+					label="Direction"
+					name="direction"
+					value={node.props.direction}
+					onChange={(v) => set({ direction: v })}
+					options={[
+						{ value: "column", icon: <IconArrowDown />, title: "Column" },
+						{ value: "row", icon: <IconArrowRight />, title: "Row" },
+					]}
+				/>
+			)}
+			{(layout === "flex" || layout === "grid") && (
+				<TokenSelect label="Gap" name="gap" value={node.props.gap} options={GAP_OPTIONS} onChange={(v) => set({ gap: v })} />
+			)}
+			{!isRoot && (
+				<TokenSelect
+					label="Width"
+					name="width"
+					value={node.props.width}
+					options={[
+						["full", "Full"],
+						["contained", "Contained"],
+					]}
+					onChange={(v) => set({ width: v })}
+				/>
+			)}
+			<TokenSelect
+				label="Padding"
+				name="padding"
+				value={node.props.padding || "none"}
+				options={[
+					["none", "None"],
+					["sm", "Small"],
+					["md", "Medium"],
+					["lg", "Large"],
+				]}
+				onChange={(v) => set({ padding: v })}
+			/>
+		</>
+	);
+}
+
+function TextContentSection({ node, set, dispatch }) {
+	return (
+		<>
+			<TokenSelect label="Tag" name="tag" value={node.props.tag} options={["h1", "h2", "h3", "h4", "h5", "h6", "p"].map((t) => [t, t])} onChange={(v) => set({ tag: v })} />
+			<Field label="Content">
+				<textarea
+					name="content"
+					rows={4}
+					value={node.props.content}
+					onChange={(e) => dispatch({ type: "props", id: node.id, patch: { content: e.target.value }, coalesce: "content" })}
+					onBlur={() => dispatch({ type: "commit" })}
+				/>
+			</Field>
+		</>
+	);
+}
+
+const WIDGET_SECTIONS = {
+	container: [{ id: "layout", label: "Layout", icon: <IconLayout />, render: ContainerLayoutSection }],
+	text: [{ id: "content", label: "Content", icon: <IconType />, render: TextContentSection }],
+};
 
 function BlockTab({ node, isRoot, dispatch }) {
 	if (!node) {
@@ -881,73 +1104,22 @@ function BlockTab({ node, isRoot, dispatch }) {
 	}
 
 	const set = (patch) => dispatch({ type: "props", id: node.id, patch });
+	const sections = WIDGET_SECTIONS[node.type] || [];
 
 	return (
 		<div className="mb-inspector" data-testid="inspector">
-			<h2 className="mb-panel-heading">
+			<h2 className="mb-panel-heading mb-inspector-title">
 				{nodeLabel(node)}
 				{isRoot ? " (page root)" : ""}
 			</h2>
 
-			{node.type === "container" && (
-				<>
-					<Field label="Direction">
-						<select name="direction" value={node.props.direction} onChange={(e) => set({ direction: e.target.value })}>
-							<option value="column">Column</option>
-							<option value="row">Row</option>
-						</select>
-					</Field>
-					<Field label="Gap">
-						<select name="gap" value={node.props.gap} onChange={(e) => set({ gap: e.target.value })}>
-							<option value="none">None</option>
-							<option value="sm">Small</option>
-							<option value="md">Medium</option>
-							<option value="lg">Large</option>
-						</select>
-					</Field>
-					{!isRoot && (
-						<Field label="Width">
-							<select name="width" value={node.props.width} onChange={(e) => set({ width: e.target.value })}>
-								<option value="full">Full</option>
-								<option value="contained">Contained</option>
-							</select>
-						</Field>
-					)}
-					<Field label="Padding">
-						<select name="padding" value={node.props.padding || "none"} onChange={(e) => set({ padding: e.target.value })}>
-							<option value="none">None</option>
-							<option value="sm">Small</option>
-							<option value="md">Medium</option>
-							<option value="lg">Large</option>
-						</select>
-					</Field>
-				</>
-			)}
+			{sections.map((s) => (
+				<Section key={s.id} id={s.id} icon={s.icon} label={s.label}>
+					<s.render node={node} isRoot={isRoot} set={set} dispatch={dispatch} />
+				</Section>
+			))}
 
-			{node.type === "text" && (
-				<>
-					<Field label="Tag">
-						<select name="tag" value={node.props.tag} onChange={(e) => set({ tag: e.target.value })}>
-							{["h1", "h2", "h3", "h4", "h5", "h6", "p"].map((t) => (
-								<option key={t} value={t}>
-									{t}
-								</option>
-							))}
-						</select>
-					</Field>
-					<Field label="Content">
-						<textarea
-							name="content"
-							rows={4}
-							value={node.props.content}
-							onChange={(e) => dispatch({ type: "props", id: node.id, patch: { content: e.target.value }, coalesce: "content" })}
-							onBlur={() => dispatch({ type: "commit" })}
-						/>
-					</Field>
-				</>
-			)}
-
-			<Field label="Custom CSS">
+			<Section id="css" icon={<IconCode />} label="Custom CSS" defaultOpen={false}>
 				<textarea
 					name="css"
 					rows={5}
@@ -956,13 +1128,15 @@ function BlockTab({ node, isRoot, dispatch }) {
 					onChange={(e) => dispatch({ type: "css", id: node.id, css: e.target.value })}
 					onBlur={() => dispatch({ type: "commit" })}
 				/>
-			</Field>
-			<p className="mb-hint">“selector” targets this block (.m-{node.id}). Empty = nothing shipped.</p>
+				<p className="mb-hint">“selector” targets this block (.m-{node.id}). Empty = nothing shipped.</p>
+			</Section>
 
 			{!isRoot && (
-				<button type="button" className="mb-btn mb-btn-danger" data-testid="delete-node" onClick={() => dispatch({ type: "delete", id: node.id })}>
-					Delete block
-				</button>
+				<div className="mb-inspector-footer">
+					<button type="button" className="mb-btn mb-btn-danger" data-testid="delete-node" onClick={() => dispatch({ type: "delete", id: node.id })}>
+						Delete block
+					</button>
+				</div>
 			)}
 		</div>
 	);

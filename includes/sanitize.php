@@ -15,6 +15,7 @@ defined( 'ABSPATH' ) || exit;
 function meraki_builder_widget_schema() {
 	return array(
 		'container' => array(
+			'layout'    => array( 'flex', 'div', 'grid' ),
 			'direction' => array( 'column', 'row' ),
 			'gap'       => array( 'md', 'none', 'sm', 'lg' ),
 			'width'     => array( 'full', 'contained' ),
@@ -122,6 +123,7 @@ function meraki_builder_sanitize_tree( $tree ) {
 				'id'       => substr( md5( wp_rand() . microtime() ), 0, 6 ),
 				'type'     => 'container',
 				'props'    => array(
+					'layout'    => 'flex',
 					'direction' => 'column',
 					'gap'       => 'md',
 					'width'     => 'full',

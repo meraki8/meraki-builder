@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-10
+
+### Added
+
+- Container layout type selector (Div / Flexbox / Grid) as an icon
+  segmented control. Div renders a plain block; Flexbox is the existing
+  behavior (direction + gap); Grid renders display:grid with the shared
+  gap control — columns and further grid settings come later. Stored as
+  props.layout; absent means flex, so existing pages are untouched and
+  render byte-identical.
+- Settings panel architecture (GenerateBlocks-style): collapsible
+  sections with icon, label and chevron, registered per widget type,
+  open/closed state remembered for the session; a reusable control kit
+  (icon segmented control, token select) that all future controls build
+  on. Containers get a Layout section, text gets Content, and Custom CSS
+  is its own collapsed section on every widget.
+
 ## [0.2.0] - 2026-07-10
 
 ### Added
@@ -79,7 +96,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scrubbing, depth cap, capability + nonce checks on save.
 - Self-hosted updates via plugin-update-checker pointed at PROJEC+ MERAKI.
 
-[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/meraki8/meraki-builder/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/meraki8/meraki-builder/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/meraki8/meraki-builder/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/meraki8/meraki-builder/compare/v0.1.0...v0.1.1
