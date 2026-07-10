@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-07-10
+
+### Added
+
+- SpacingControl (GenerateBlocks-style) for container padding: four side
+  fields with three link modes (linked / axis / individual), per-field
+  unit pickers (px/rem/em/%), raw CSS values (var/calc/clamp) accepted
+  verbatim, and one-click theme spacing token presets.
+- Generated-styles pipeline: nodes gain a styles object compiled
+  server-side into the existing per-page style output (.m-{id} rules,
+  generated first so custom CSS can override); empty values emit nothing.
+  The canvas mirrors compiled styles live. This is the foundation every
+  future styling control reuses.
+- Width is now an icon segmented control.
+
+### Changed
+
+- Stepped padding (sm/md/lg) is legacy: untouched pages render exactly
+  as before; the new control displays the token equivalent and the first
+  edit converts the node to generated styles in a single undo step.
+
 ## [0.3.0] - 2026-07-10
 
 ### Added
@@ -96,7 +117,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scrubbing, depth cap, capability + nonce checks on save.
 - Self-hosted updates via plugin-update-checker pointed at PROJEC+ MERAKI.
 
-[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/meraki8/meraki-builder/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/meraki8/meraki-builder/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/meraki8/meraki-builder/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/meraki8/meraki-builder/compare/v0.1.1...v0.1.2

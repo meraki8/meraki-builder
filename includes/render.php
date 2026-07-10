@@ -148,13 +148,27 @@ function meraki_builder_tree_text( $node ) {
 }
 
 /**
- * Gather non-empty per-node css, resolving "selector" to .m-{id}.
+ * Gather per-node CSS: generated styles first (styles.padding for now),
+ * then the custom css field so it can override. Empty = nothing emitted.
  */
 function meraki_builder_collect_css( $node ) {
 	$css = '';
+	$id  = preg_replace( '/[^a-z0-9]/', '', strtolower( $node['id'] ?? '' ) );
+
+	if ( '' !== $id && ! empty( $node['styles']['padding'] ) && is_array( $node['styles']['padding'] ) ) {
+		$rules = array();
+		foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
+			$value = meraki_builder_sanitize_style_value( $node['styles']['padding'][ $side ] ?? '' );
+			if ( '' !== $value ) {
+				$rules[] = 'padding-' . $side . ':' . $value;
+			}
+		}
+		if ( $rules ) {
+			$css .= '.m-' . $id . '{' . implode( ';', $rules ) . '}' . "\n";
+		}
+	}
 
 	if ( ! empty( $node['css'] ) ) {
-		$id   = preg_replace( '/[^a-z0-9]/', '', strtolower( $node['id'] ?? '' ) );
 		$rule = meraki_builder_sanitize_css( $node['css'] );
 		if ( '' !== $rule && '' !== $id ) {
 			$css .= str_replace( 'selector', '.m-' . $id, $rule ) . "\n";

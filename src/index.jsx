@@ -13,6 +13,7 @@ import {
 import {
 	WIDGETS,
 	createNode,
+	compileStyles,
 	findNode,
 	findParent,
 	updateNode,
@@ -75,6 +76,19 @@ function reducer(state, action) {
 				updateNode(tree, action.id, (n) => ({ ...n, css: action.css })),
 				selectedId,
 				`css:${action.id}`
+			);
+		case "styles":
+			// Generated-styles pipeline: patch styles, optionally clearing a
+			// legacy prop in the same (single) history step.
+			return withHistory(
+				state,
+				updateNode(tree, action.id, (n) => ({
+					...n,
+					styles: { ...(n.styles || {}), ...action.patch },
+					props: action.alsoProps ? { ...n.props, ...action.alsoProps } : n.props,
+				})),
+				selectedId,
+				action.coalesce ? `styles:${action.id}:${action.coalesce}` : null
 			);
 		case "delete": {
 			const { root } = removeNode(tree, action.id);
@@ -540,6 +554,9 @@ function App() {
 						</div>
 					</aside>
 
+					{/* generated styles mirrored live; scoped under .mb-canvas so
+					    they outrank the editor's base container padding */}
+					<style data-testid="canvas-styles">{compileStyles(tree, ".mb-canvas ").join("\n")}</style>
 					<div
 						className="mb-canvas"
 						data-testid="canvas"
@@ -929,6 +946,44 @@ const IconCode = () =>
 			<polyline points="8 6 2 12 8 18" />
 		</>
 	);
+const IconLink = () =>
+	I(
+		<>
+			<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+			<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+		</>
+	);
+const IconUnlink = () =>
+	I(
+		<>
+			<path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+			<path d="M5.17 11.75l-1.72 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+			<line x1="8" y1="2" x2="8" y2="5" />
+			<line x1="2" y1="8" x2="5" y2="8" />
+			<line x1="16" y1="19" x2="16" y2="22" />
+			<line x1="19" y1="16" x2="22" y2="16" />
+		</>
+	);
+const IconAxis = () =>
+	I(
+		<>
+			<line x1="12" y1="4" x2="12" y2="20" />
+			<polyline points="9 6 12 3 15 6" />
+			<polyline points="9 18 12 21 15 18" />
+			<line x1="4" y1="12" x2="20" y2="12" />
+			<polyline points="6 9 3 12 6 15" />
+			<polyline points="18 9 21 12 18 15" />
+		</>
+	);
+const IconContained = () =>
+	I(
+		<>
+			<line x1="3" y1="4" x2="3" y2="20" />
+			<line x1="21" y1="4" x2="21" y2="20" />
+			<rect x="8" y="7" width="8" height="10" rx="1" />
+		</>
+	);
+const IconFull = () => I(<rect x="3" y="7" width="18" height="10" rx="1" />);
 
 /* ------------------------------------------------------------ control kit */
 /* GB-style building blocks: collapsible Section (session-remembered),
@@ -1004,9 +1059,159 @@ function TokenSelect({ label, name, value, options, onChange }) {
 	);
 }
 
+/* --------------------------------------------------------- SpacingControl */
+/* GB-style four-side control with three link modes. The stored shape is
+   always {top,right,bottom,left} strings; the mode is pure UI. Values
+   accept number+unit or raw CSS (var/calc/clamp) verbatim. */
+
+const SPACE_TOKENS = ["xs", "s", "m", "l", "xl"];
+const UNIT_RE = /^(-?[\d.]+)(px|rem|em|%)$/;
+
+function deriveSpacingMode(v) {
+	const t = v.top || "", r = v.right || "", b = v.bottom || "", l = v.left || "";
+	if (t === r && r === b && b === l) return "linked";
+	if (t === b && l === r) return "axis";
+	return "individual";
+}
+
+function SpacingField({ side, sideLabel, value, onChange, onCommit }) {
+	const m = UNIT_RE.exec(value || "");
+	const display = m ? m[1] : value || "";
+	const unit = m ? m[2] : "";
+	return (
+		<div className="mb-spacing-field">
+			<span className="mb-spacing-side">{sideLabel}</span>
+			<input
+				type="text"
+				value={display}
+				data-side={side}
+				onChange={(e) => {
+					// Never trim mid-typing — calc()/var() need their spaces.
+					const t = e.target.value;
+					if (t.trim() === "") onChange("");
+					else if (/^-?[\d.]+$/.test(t.trim())) onChange(t.trim() + (unit || "px"));
+					else onChange(t);
+				}}
+				onBlur={onCommit}
+			/>
+			<select
+				className="mb-spacing-unit"
+				data-side-unit={side}
+				value={unit}
+				disabled={!m && (value || "") !== ""}
+				onChange={(e) => {
+					if (m) onChange(m[1] + e.target.value);
+				}}
+			>
+				<option value="" disabled hidden>
+					–
+				</option>
+				{["px", "rem", "em", "%"].map((u) => (
+					<option key={u} value={u}>
+						{u}
+					</option>
+				))}
+			</select>
+		</div>
+	);
+}
+
+function SpacingControl({ label, value, onChange, onCommit }) {
+	const [mode, setMode] = useState(() => deriveSpacingMode(value));
+
+	const setSides = (sides, v, coalesce) => {
+		const next = { ...value };
+		sides.forEach((s) => (next[s] = v));
+		onChange(next, coalesce);
+	};
+
+	const cycle = () => {
+		if (mode === "linked") {
+			// pairs are already equal coming from linked; no value change
+			setMode("axis");
+		} else if (mode === "axis") {
+			setMode("individual");
+		} else {
+			// individual -> linked: top (or the common value) drives all four
+			const v = value.top || "";
+			if (value.right !== v || value.bottom !== v || value.left !== v) {
+				onChange({ top: v, right: v, bottom: v, left: v }, null);
+			}
+			setMode("linked");
+		}
+	};
+
+	const modeMeta = {
+		linked: { icon: <IconLink />, title: "Linked — one value, all sides" },
+		axis: { icon: <IconAxis />, title: "Axis — Y (top/bottom) and X (left/right)" },
+		individual: { icon: <IconUnlink />, title: "Individual sides" },
+	};
+
+	return (
+		<div className="mb-field mb-spacing" data-testid="spacing-control" data-mode={mode}>
+			<span className="mb-field-label mb-spacing-head">
+				{label}
+				<button type="button" className="mb-spacing-mode" data-testid="spacing-mode" title={modeMeta[mode].title} onClick={cycle}>
+					{modeMeta[mode].icon}
+				</button>
+			</span>
+
+			<div className="mb-spacing-fields">
+				{mode === "linked" && (
+					<SpacingField side="all" sideLabel="All" value={value.top || ""} onChange={(v) => setSides(["top", "right", "bottom", "left"], v, "padding:all")} onCommit={onCommit} />
+				)}
+				{mode === "axis" && (
+					<>
+						<SpacingField side="y" sideLabel="Y" value={value.top || ""} onChange={(v) => setSides(["top", "bottom"], v, "padding:y")} onCommit={onCommit} />
+						<SpacingField side="x" sideLabel="X" value={value.left || ""} onChange={(v) => setSides(["left", "right"], v, "padding:x")} onCommit={onCommit} />
+					</>
+				)}
+				{mode === "individual" &&
+					[
+						["top", "T"],
+						["right", "R"],
+						["bottom", "B"],
+						["left", "L"],
+					].map(([side, sideLabel]) => (
+						<SpacingField key={side} side={side} sideLabel={sideLabel} value={value[side] || ""} onChange={(v) => setSides([side], v, "padding:" + side)} onCommit={onCommit} />
+					))}
+			</div>
+
+			<div className="mb-spacing-presets" role="group" aria-label="Spacing tokens">
+				{SPACE_TOKENS.map((tok) => (
+					<button
+						key={tok}
+						type="button"
+						data-testid={"pad-token-" + tok}
+						title={`var(--space-${tok})`}
+						onClick={() => {
+							const v = `var(--space-${tok})`;
+							onChange({ top: v, right: v, bottom: v, left: v }, null);
+							setMode("linked");
+						}}
+					>
+						{tok}
+					</button>
+				))}
+				<button
+					type="button"
+					data-testid="pad-token-clear"
+					title="Clear padding"
+					onClick={() => {
+						onChange({ top: "", right: "", bottom: "", left: "" }, null);
+						setMode("linked");
+					}}
+				>
+					×
+				</button>
+			</div>
+		</div>
+	);
+}
+
 /* Sections registered per widget type; future widgets slot in here. */
 
-function ContainerLayoutSection({ node, isRoot, set }) {
+function ContainerLayoutSection({ node, isRoot, set, dispatch }) {
 	const layout = node.props.layout === "div" || node.props.layout === "grid" ? node.props.layout : "flex";
 	const GAP_OPTIONS = [
 		["none", "None"],
@@ -1045,31 +1250,47 @@ function ContainerLayoutSection({ node, isRoot, set }) {
 				<TokenSelect label="Gap" name="gap" value={node.props.gap} options={GAP_OPTIONS} onChange={(v) => set({ gap: v })} />
 			)}
 			{!isRoot && (
-				<TokenSelect
+				<SegmentedControl
 					label="Width"
 					name="width"
 					value={node.props.width}
-					options={[
-						["full", "Full"],
-						["contained", "Contained"],
-					]}
 					onChange={(v) => set({ width: v })}
+					options={[
+						{ value: "full", icon: <IconFull />, title: "Full width" },
+						{ value: "contained", icon: <IconContained />, title: "Contained" },
+					]}
 				/>
 			)}
-			<TokenSelect
-				label="Padding"
-				name="padding"
-				value={node.props.padding || "none"}
-				options={[
-					["none", "None"],
-					["sm", "Small"],
-					["md", "Medium"],
-					["lg", "Large"],
-				]}
-				onChange={(v) => set({ padding: v })}
-			/>
+			<ContainerPadding node={node} dispatch={dispatch} />
 		</>
 	);
+}
+
+/* Legacy stepped padding (sm/md/lg classes) displays as its token
+   equivalent; the first edit converts the node to generated styles and
+   clears the legacy prop in the same history step. */
+const LEGACY_PAD_TOKEN = { sm: "var(--space-s)", md: "var(--space-m)", lg: "var(--space-xl)" };
+
+function ContainerPadding({ node, dispatch }) {
+	const stored = node.styles && node.styles.padding;
+	const legacy = !stored ? LEGACY_PAD_TOKEN[node.props.padding] : null;
+	const value = {
+		top: (stored && stored.top) || legacy || "",
+		right: (stored && stored.right) || legacy || "",
+		bottom: (stored && stored.bottom) || legacy || "",
+		left: (stored && stored.left) || legacy || "",
+	};
+
+	const onChange = (next, coalesce) =>
+		dispatch({
+			type: "styles",
+			id: node.id,
+			patch: { padding: next },
+			alsoProps: node.props.padding && node.props.padding !== "none" ? { padding: "none" } : undefined,
+			coalesce,
+		});
+
+	return <SpacingControl key={node.id} label="Padding" value={value} onChange={onChange} onCommit={() => dispatch({ type: "commit" })} />;
 }
 
 function TextContentSection({ node, set, dispatch }) {

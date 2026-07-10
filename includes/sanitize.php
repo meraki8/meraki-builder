@@ -54,6 +54,40 @@ function meraki_builder_sanitize_css( $css ) {
 }
 
 /**
+ * Values from generated-style fields (styles.padding etc.) end up inside
+ * a <style> element as declaration values. Strip anything that could
+ * escape the declaration or the rule, plus the css-field blocklist.
+ */
+function meraki_builder_sanitize_style_value( $value ) {
+	$value = trim( (string) $value );
+	// Without ';' or '}' a value cannot escape its declaration or rule.
+	$value = str_replace( array( '<', '\\', '{', '}', ';' ), '', $value );
+	$value = preg_replace( '/@import|expression\s*\(|javascript:|behavior\s*:|url\s*\(/i', '', $value );
+	return substr( $value, 0, 100 );
+}
+
+/**
+ * styles object whitelist: styles.padding.{top,right,bottom,left},
+ * non-empty values only.
+ */
+function meraki_builder_sanitize_styles( $styles ) {
+	$clean = array();
+	if ( ! empty( $styles['padding'] ) && is_array( $styles['padding'] ) ) {
+		$padding = array();
+		foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
+			$value = meraki_builder_sanitize_style_value( $styles['padding'][ $side ] ?? '' );
+			if ( '' !== $value ) {
+				$padding[ $side ] = $value;
+			}
+		}
+		if ( $padding ) {
+			$clean['padding'] = $padding;
+		}
+	}
+	return $clean;
+}
+
+/**
  * Recursively sanitize a decoded tree. Returns a clean node or null.
  *
  * @param array $node  Raw node from the client.
@@ -101,6 +135,7 @@ function meraki_builder_sanitize_node( $node, $depth = 0 ) {
 		'type'     => $type,
 		'props'    => $props,
 		'css'      => meraki_builder_sanitize_css( isset( $node['css'] ) ? $node['css'] : '' ),
+		'styles'   => meraki_builder_sanitize_styles( is_array( $node['styles'] ?? null ) ? $node['styles'] : array() ),
 		'children' => $children,
 	);
 }

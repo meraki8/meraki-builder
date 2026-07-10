@@ -675,6 +675,101 @@
 	line-height: 1;
 }
 
+/* ---------------------------------------------------------------- spacing */
+.mb-spacing-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.mb-app .mb-spacing-mode {
+	background: none;
+	border: 1px solid var(--color-border, #e3ded4);
+	border-radius: 4px;
+	color: var(--color-muted, #5e574c);
+	padding: 2px 4px;
+	line-height: 0;
+	cursor: pointer;
+}
+
+.mb-app .mb-spacing-mode:hover {
+	border-color: var(--color-accent, #9c4221);
+	color: var(--color-accent, #9c4221);
+}
+
+.mb-spacing-fields {
+	display: flex;
+	gap: 4px;
+}
+
+.mb-spacing-field {
+	flex: 1;
+	min-width: 0;
+	position: relative;
+	display: flex;
+}
+
+.mb-spacing-side {
+	position: absolute;
+	top: -6px;
+	left: 6px;
+	font-size: 8px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--color-muted, #5e574c);
+	background: #fff;
+	padding: 0 3px;
+	z-index: 1;
+	pointer-events: none;
+}
+
+.mb-app .mb-spacing-field input {
+	flex: 1;
+	min-width: 0;
+	font: inherit;
+	font-size: 0.72rem;
+	color: inherit;
+	background: #fff;
+	border: 1px solid var(--color-border, #e3ded4);
+	border-right: 0;
+	border-radius: 5px 0 0 5px;
+	padding: 0.35em 0.4em;
+}
+
+.mb-app .mb-spacing-field .mb-spacing-unit {
+	width: 3.1em;
+	font-size: 0.65rem;
+	color: var(--color-muted, #5e574c);
+	background: var(--color-bg, #faf8f5);
+	border: 1px solid var(--color-border, #e3ded4);
+	border-radius: 0 5px 5px 0;
+	padding: 0 1px;
+}
+
+.mb-spacing-presets {
+	display: flex;
+	gap: 3px;
+	margin-top: 6px;
+}
+
+.mb-app .mb-spacing-presets button {
+	flex: 1;
+	background: var(--color-bg, #faf8f5);
+	border: 1px solid var(--color-border, #e3ded4);
+	border-radius: 4px;
+	font-size: 0.62rem;
+	font-weight: 650;
+	color: var(--color-muted, #5e574c);
+	padding: 3px 0;
+	cursor: pointer;
+}
+
+.mb-app .mb-spacing-presets button:hover {
+	border-color: var(--color-accent, #9c4221);
+	color: var(--color-accent, #9c4221);
+}
+
 .mb-empty-state p {
 	color: var(--color-muted, #5e574c);
 	font-size: 0.8125rem;

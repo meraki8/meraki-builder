@@ -26,8 +26,25 @@ export const createNode = (type) => ({
 	type,
 	props: { ...WIDGETS[type].defaults },
 	css: "",
+	styles: {},
 	children: [],
 });
+
+/**
+ * Compile per-node generated styles (styles.padding for now) to CSS.
+ * Mirrors the server-side compiler; the canvas injects the result live.
+ */
+export function compileStyles(node, prefix = "", out = []) {
+	const pad = node.styles && node.styles.padding;
+	if (pad) {
+		const rules = ["top", "right", "bottom", "left"]
+			.filter((s) => (pad[s] || "").trim() !== "")
+			.map((s) => `padding-${s}:${pad[s].trim()}`);
+		if (rules.length) out.push(`${prefix}.m-${node.id}{${rules.join(";")}}`);
+	}
+	node.children.forEach((c) => compileStyles(c, prefix, out));
+	return out;
+}
 
 export function findNode(node, id) {
 	if (node.id === id) return node;
