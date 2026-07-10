@@ -12,6 +12,14 @@
 	flex-direction: column;
 	height: 100vh;
 	font-size: 0.875rem;
+
+	/* panel design tokens — one height, one radius, one rhythm */
+	--mbui-h: 26px;
+	--mbui-radius: 5px;
+	--mbui-font: 11.5px;
+	--mbui-label: 10px;
+	--mbui-row-gap: 12px;
+	--mbui-pad-x: 12px;
 }
 
 /* ---------------------------------------------------------------- topbar */
@@ -252,9 +260,9 @@
 
 .mb-app .mb-panel-heading {
 	font-family: var(--font-body, sans-serif);
-	font-size: 0.75rem;
+	font-size: var(--mbui-label, 10px);
 	font-weight: 650;
-	letter-spacing: 0.05em;
+	letter-spacing: 0.06em;
 	text-transform: uppercase;
 	color: var(--color-muted, #5e574c);
 	margin: 0 0 0.75rem;
@@ -573,13 +581,68 @@
 }
 
 .mb-inspector-title {
-	padding: 0.85rem 1rem 0.6rem;
+	padding: 12px var(--mbui-pad-x) 10px;
 	margin: 0;
 	border-bottom: 1px solid var(--color-border, #e3ded4);
 }
 
 .mb-inspector-footer {
-	padding: 0.5rem 1rem 1rem;
+	padding: 10px var(--mbui-pad-x) 14px;
+}
+
+/* One field rhythm and one control skin for the whole panel */
+.mb-inspector .mb-field {
+	display: block;
+	margin-bottom: var(--mbui-row-gap);
+}
+
+.mb-inspector .mb-field:last-child {
+	margin-bottom: 2px;
+}
+
+.mb-inspector .mb-field-label {
+	display: block;
+	font-size: var(--mbui-label);
+	font-weight: 650;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--color-muted, #5e574c);
+	margin-bottom: 5px;
+}
+
+.mb-app .mb-inspector select,
+.mb-app .mb-inspector input[type="text"] {
+	width: 100%;
+	height: var(--mbui-h);
+	font: inherit;
+	font-size: var(--mbui-font);
+	color: inherit;
+	background: #fff;
+	border: 1px solid var(--color-border, #e3ded4);
+	border-radius: var(--mbui-radius);
+	padding: 0 8px;
+	box-sizing: border-box;
+}
+
+.mb-app .mb-inspector textarea {
+	width: 100%;
+	font: inherit;
+	font-size: var(--mbui-font);
+	line-height: 1.5;
+	color: inherit;
+	background: #fff;
+	border: 1px solid var(--color-border, #e3ded4);
+	border-radius: var(--mbui-radius);
+	padding: 6px 8px;
+	box-sizing: border-box;
+}
+
+.mb-app .mb-inspector select:focus-visible,
+.mb-app .mb-inspector input:focus-visible,
+.mb-app .mb-inspector textarea:focus-visible {
+	outline: none;
+	border-color: var(--color-accent, #9c4221);
+	box-shadow: 0 0 0 1px var(--color-accent, #9c4221);
 }
 
 /* ---------------------------------------------------------------- sections */
@@ -590,13 +653,13 @@
 .mb-app .mb-section-header {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
+	gap: 8px;
 	width: 100%;
 	background: none;
 	border: 0;
-	padding: 0.65rem 1rem;
+	padding: 10px var(--mbui-pad-x, 12px);
 	font: inherit;
-	font-size: 0.78rem;
+	font-size: 0.75rem;
 	font-weight: 650;
 	color: var(--color-text, #23201c);
 	cursor: pointer;
@@ -628,16 +691,18 @@
 }
 
 .mb-section-body {
-	padding: 0.25rem 1rem 0.9rem;
+	padding: 4px var(--mbui-pad-x, 12px) 14px;
 }
 
 /* --------------------------------------------------------------- segmented */
 .mb-segmented {
 	display: flex;
+	height: var(--mbui-h);
 	border: 1px solid var(--color-border, #e3ded4);
-	border-radius: 6px;
+	border-radius: var(--mbui-radius);
 	overflow: hidden;
 	background: #fff;
+	box-sizing: border-box;
 }
 
 .mb-app .mb-segmented button {
@@ -649,7 +714,7 @@
 	background: none;
 	border: 0;
 	border-right: 1px solid var(--color-border, #e3ded4);
-	padding: 6px 0;
+	padding: 0;
 	color: var(--color-muted, #5e574c);
 	cursor: pointer;
 	line-height: 0;
@@ -676,98 +741,145 @@
 }
 
 /* ---------------------------------------------------------------- spacing */
-.mb-spacing-head {
+.mb-app .mb-field-label.mb-spacing-head {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	margin-bottom: 5px;
 }
 
 .mb-app .mb-spacing-mode {
+	display: inline-grid;
+	place-items: center;
+	width: 22px;
+	height: 22px;
 	background: none;
-	border: 1px solid var(--color-border, #e3ded4);
+	border: 1px solid transparent;
 	border-radius: 4px;
 	color: var(--color-muted, #5e574c);
-	padding: 2px 4px;
+	padding: 0;
 	line-height: 0;
 	cursor: pointer;
+	margin: -4px 0;
 }
 
 .mb-app .mb-spacing-mode:hover {
-	border-color: var(--color-accent, #9c4221);
+	border-color: var(--color-border, #e3ded4);
+	background: var(--color-bg, #faf8f5);
 	color: var(--color-accent, #9c4221);
 }
 
+/* Field grid adapts to the link mode: 1 / 2 / 2x2 columns, so every
+   field is wide enough for real values like var(--space-m). */
 .mb-spacing-fields {
-	display: flex;
-	gap: 4px;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 6px 6px;
 }
 
-.mb-spacing-field {
-	flex: 1;
+.mb-spacing[data-mode="linked"] .mb-spacing-fields {
+	grid-template-columns: 1fr;
+}
+
+.mb-sfield {
 	min-width: 0;
-	position: relative;
-	display: flex;
 }
 
-.mb-spacing-side {
-	position: absolute;
-	top: -6px;
-	left: 6px;
-	font-size: 8px;
+.mb-sfield-side {
+	display: block;
+	font-size: 9px;
 	font-weight: 700;
-	letter-spacing: 0.04em;
+	letter-spacing: 0.06em;
 	text-transform: uppercase;
-	color: var(--color-muted, #5e574c);
-	background: #fff;
-	padding: 0 3px;
-	z-index: 1;
-	pointer-events: none;
+	color: color-mix(in srgb, var(--color-muted, #5e574c) 72%, transparent);
+	margin: 0 0 3px 1px;
 }
 
-.mb-app .mb-spacing-field input {
+/* Unit lives INSIDE the field boundary as a quiet suffix */
+.mb-sfield-box {
+	display: flex;
+	align-items: center;
+	height: var(--mbui-h);
+	background: #fff;
+	border: 1px solid var(--color-border, #e3ded4);
+	border-radius: var(--mbui-radius);
+	box-sizing: border-box;
+	overflow: hidden;
+}
+
+.mb-sfield-box:focus-within {
+	border-color: var(--color-accent, #9c4221);
+	box-shadow: 0 0 0 1px var(--color-accent, #9c4221);
+}
+
+.mb-app .mb-inspector .mb-sfield-box input[type="text"] {
 	flex: 1;
 	min-width: 0;
-	font: inherit;
-	font-size: 0.72rem;
-	color: inherit;
-	background: #fff;
-	border: 1px solid var(--color-border, #e3ded4);
-	border-right: 0;
-	border-radius: 5px 0 0 5px;
-	padding: 0.35em 0.4em;
+	height: 100%;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	padding: 0 2px 0 8px;
 }
 
-.mb-app .mb-spacing-field .mb-spacing-unit {
-	width: 3.1em;
-	font-size: 0.65rem;
+.mb-app .mb-inspector .mb-sfield-box input:focus-visible {
+	border: 0;
+	box-shadow: none;
+}
+
+.mb-app .mb-inspector .mb-sfield-box .mb-spacing-unit {
+	width: auto;
+	height: 100%;
+	flex-shrink: 0;
+	border: 0;
+	border-radius: 0;
+	background: none;
 	color: var(--color-muted, #5e574c);
-	background: var(--color-bg, #faf8f5);
-	border: 1px solid var(--color-border, #e3ded4);
-	border-radius: 0 5px 5px 0;
-	padding: 0 1px;
+	font-size: 10px;
+	font-weight: 600;
+	padding: 0 6px 0 0;
+	text-align: right;
+	-webkit-appearance: none;
+	appearance: none;
+	cursor: pointer;
 }
 
+.mb-app .mb-inspector .mb-sfield-box .mb-spacing-unit.is-raw {
+	display: none;
+}
+
+.mb-app .mb-inspector .mb-sfield-box.is-raw input {
+	padding-right: 8px;
+	font-family: var(--font-mono, monospace);
+	font-size: 10.5px;
+}
+
+/* Token quick-picks: one even row, quiet until hovered */
 .mb-spacing-presets {
-	display: flex;
-	gap: 3px;
-	margin-top: 6px;
+	display: grid;
+	grid-template-columns: repeat(6, 1fr);
+	gap: 4px;
+	margin-top: 8px;
 }
 
 .mb-app .mb-spacing-presets button {
-	flex: 1;
+	height: 20px;
 	background: var(--color-bg, #faf8f5);
 	border: 1px solid var(--color-border, #e3ded4);
 	border-radius: 4px;
-	font-size: 0.62rem;
+	font-size: 9.5px;
 	font-weight: 650;
+	letter-spacing: 0.04em;
 	color: var(--color-muted, #5e574c);
-	padding: 3px 0;
+	padding: 0;
+	line-height: 1;
 	cursor: pointer;
 }
 
 .mb-app .mb-spacing-presets button:hover {
 	border-color: var(--color-accent, #9c4221);
 	color: var(--color-accent, #9c4221);
+	background: #fff;
 }
 
 .mb-empty-state p {
@@ -775,17 +887,20 @@
 	font-size: 0.8125rem;
 }
 
+/* Base field styles (Page tab and anywhere outside .mb-inspector) */
 .mb-field {
 	display: block;
-	margin-bottom: 0.9rem;
+	margin-bottom: var(--mbui-row-gap, 12px);
 }
 
 .mb-field-label {
 	display: block;
-	font-size: 0.75rem;
-	font-weight: 600;
+	font-size: var(--mbui-label, 10px);
+	font-weight: 650;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
 	color: var(--color-muted, #5e574c);
-	margin-bottom: 0.3rem;
+	margin-bottom: 5px;
 }
 
 .mb-app .mb-field select,
@@ -793,21 +908,23 @@
 .mb-app .mb-field textarea {
 	width: 100%;
 	font: inherit;
+	font-size: var(--mbui-font, 11.5px);
 	color: inherit;
 	background: #fff;
 	border: 1px solid var(--color-border, #e3ded4);
-	border-radius: 5px;
+	border-radius: var(--mbui-radius, 5px);
 	padding: 0.4em 0.6em;
 	box-sizing: border-box;
 }
 
 .mb-app .mb-field textarea[name="css"] {
 	font-family: var(--font-mono, monospace);
-	font-size: 0.75rem;
+	font-size: 10.5px;
 }
 
 .mb-hint {
-	font-size: 0.7rem;
+	font-size: 0.66rem;
+	line-height: 1.5;
 	color: var(--color-muted, #5e574c);
-	margin: -0.4rem 0 0.9rem;
+	margin: 6px 0 0;
 }

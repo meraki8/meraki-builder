@@ -1078,40 +1078,45 @@ function SpacingField({ side, sideLabel, value, onChange, onCommit }) {
 	const m = UNIT_RE.exec(value || "");
 	const display = m ? m[1] : value || "";
 	const unit = m ? m[2] : "";
+	const isRaw = !m && (value || "") !== "";
 	return (
-		<div className="mb-spacing-field">
-			<span className="mb-spacing-side">{sideLabel}</span>
-			<input
-				type="text"
-				value={display}
-				data-side={side}
-				onChange={(e) => {
-					// Never trim mid-typing — calc()/var() need their spaces.
-					const t = e.target.value;
-					if (t.trim() === "") onChange("");
-					else if (/^-?[\d.]+$/.test(t.trim())) onChange(t.trim() + (unit || "px"));
-					else onChange(t);
-				}}
-				onBlur={onCommit}
-			/>
-			<select
-				className="mb-spacing-unit"
-				data-side-unit={side}
-				value={unit}
-				disabled={!m && (value || "") !== ""}
-				onChange={(e) => {
-					if (m) onChange(m[1] + e.target.value);
-				}}
-			>
-				<option value="" disabled hidden>
-					–
-				</option>
-				{["px", "rem", "em", "%"].map((u) => (
-					<option key={u} value={u}>
-						{u}
+		<div className="mb-sfield">
+			<span className="mb-sfield-side">{sideLabel}</span>
+			<div className={"mb-sfield-box" + (isRaw ? " is-raw" : "")}>
+				<input
+					type="text"
+					value={display}
+					data-side={side}
+					title={value || ""}
+					onChange={(e) => {
+						// Never trim mid-typing — calc()/var() need their spaces.
+						const t = e.target.value;
+						if (t.trim() === "") onChange("");
+						else if (/^-?[\d.]+$/.test(t.trim())) onChange(t.trim() + (unit || "px"));
+						else onChange(t);
+					}}
+					onBlur={onCommit}
+				/>
+				<select
+					className={"mb-spacing-unit" + (isRaw ? " is-raw" : "")}
+					data-side-unit={side}
+					value={unit}
+					disabled={isRaw}
+					aria-label="Unit"
+					onChange={(e) => {
+						if (m) onChange(m[1] + e.target.value);
+					}}
+				>
+					<option value="" disabled hidden>
+						–
 					</option>
-				))}
-			</select>
+					{["px", "rem", "em", "%"].map((u) => (
+						<option key={u} value={u}>
+							{u}
+						</option>
+					))}
+				</select>
+			</div>
 		</div>
 	);
 }

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-07-10
+
+### Changed
+
+- Settings panel polish pass (editor-only, zero functional changes):
+  one design system for the panel — single control height, radius, font
+  size, label style and row rhythm across every kit control. The
+  SpacingControl gets readable full-width fields on an adaptive grid,
+  unit pickers integrated inside the field boundary, subtle side labels,
+  a right-aligned link-mode toggle, and an even token chip row.
+
 ## [0.3.1] - 2026-07-10
 
 ### Added
@@ -117,7 +128,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scrubbing, depth cap, capability + nonce checks on save.
 - Self-hosted updates via plugin-update-checker pointed at PROJEC+ MERAKI.
 
-[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/meraki8/meraki-builder/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/meraki8/meraki-builder/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/meraki8/meraki-builder/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/meraki8/meraki-builder/compare/v0.1.2...v0.2.0
