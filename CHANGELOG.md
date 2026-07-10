@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-10
+
+### Added
+
+- Responsive system (GenerateBlocks-style, desktop-first): four-view
+  device switcher in the top bar (Desktop / Tablet Landscape / Tablet
+  Portrait / Mobile) that resizes the canvas and re-targets the settings
+  panel; styles store per-breakpoint buckets compiled to max-width media
+  queries in descending order; smaller views inherit unless overridden.
+- GB 2.1 indicator model: a dot on any control with a local value at the
+  edited breakpoint, inherited values shown as placeholders in empty
+  fields, and override dots on the device switcher buttons.
+- Gap is now Row/Column input fields with a link toggle (linked emits
+  the gap shorthand), unit pickers, raw CSS and token presets — fully
+  responsive, replacing the Gap select.
+
+### Changed
+
+- Pre-0.4.0 flat styles read as the base breakpoint and convert on first
+  edit (single undo returns to legacy); stepped gap props keep rendering
+  via classes untouched and convert on first edit like padding did.
+  Untouched pages render byte-identical.
+
 ## [0.3.2] - 2026-07-10
 
 ### Changed
@@ -128,7 +151,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scrubbing, depth cap, capability + nonce checks on save.
 - Self-hosted updates via plugin-update-checker pointed at PROJEC+ MERAKI.
 
-[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/meraki8/meraki-builder/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/meraki8/meraki-builder/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/meraki8/meraki-builder/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/meraki8/meraki-builder/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/meraki8/meraki-builder/compare/v0.2.0...v0.3.0

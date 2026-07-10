@@ -12,8 +12,14 @@ import {
 } from "@dnd-kit/core";
 import {
 	WIDGETS,
+	BREAKPOINTS,
+	BP_KEYS,
 	createNode,
-	compileStyles,
+	compileCanvasStyles,
+	normalizeStyles,
+	localStyle,
+	effectiveStyle,
+	bucketHasStyles,
 	findNode,
 	findParent,
 	updateNode,
@@ -77,14 +83,15 @@ function reducer(state, action) {
 				selectedId,
 				`css:${action.id}`
 			);
-		case "styles":
-			// Generated-styles pipeline: patch styles, optionally clearing a
-			// legacy prop in the same (single) history step.
+		case "stylesSet":
+			// Generated-styles pipeline: the control layer builds the full
+			// next styles object (normalized to breakpoint buckets, legacy
+			// materialized) so any conversion lands in ONE history step.
 			return withHistory(
 				state,
 				updateNode(tree, action.id, (n) => ({
 					...n,
-					styles: { ...(n.styles || {}), ...action.patch },
+					styles: action.styles,
 					props: action.alsoProps ? { ...n.props, ...action.alsoProps } : n.props,
 				})),
 				selectedId,
@@ -156,6 +163,7 @@ function App() {
 	const [hoveredId, setHoveredId] = useState(null);
 	const [collapsed, setCollapsed] = useState(() => new Set());
 	const [tab, setTab] = useState("block");
+	const [device, setDevice] = useState("base"); // persists across node switches
 	const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
 
 	const nodeEls = useRef(new Map());
@@ -508,6 +516,22 @@ function App() {
 						<strong>Meraki Builder</strong>
 						<span className="mb-topbar-title">{title || "(untitled)"}</span>
 					</div>
+					<div className="mb-devices" role="group" aria-label="Preview device">
+						{BREAKPOINTS.map((bp) => (
+							<button
+								key={bp.key}
+								type="button"
+								title={bp.label + (bp.maxWidth ? ` (≤${bp.maxWidth}px)` : "")}
+								aria-pressed={device === bp.key}
+								className={"mb-devbtn" + (device === bp.key ? " is-active" : "")}
+								data-testid={"device-" + bp.key}
+								onClick={() => setDevice(bp.key)}
+							>
+								<DeviceIcon bp={bp.key} />
+								{bp.key !== "base" && selected && bucketHasStyles(selected, bp.key) && <span className="mb-devdot" data-testid={"devdot-" + bp.key} />}
+							</button>
+						))}
+					</div>
 					<div className="mb-topbar-actions">
 						<button type="button" className="mb-btn mb-btn-quiet mb-btn-history" data-testid="undo" title="Undo (⌘Z)" disabled={!past.length} onClick={() => dispatch({ type: "undo" })}>
 							↶
@@ -554,16 +578,21 @@ function App() {
 						</div>
 					</aside>
 
-					{/* generated styles mirrored live; scoped under .mb-canvas so
-					    they outrank the editor's base container padding */}
-					<style data-testid="canvas-styles">{compileStyles(tree, ".mb-canvas ").join("\n")}</style>
+					{/* effective styles for the previewed breakpoint (the canvas
+					    resizes rather than being a real viewport, so media
+					    queries are resolved here instead) */}
+					<style data-testid="canvas-styles">{compileCanvasStyles(tree, device).join("\n")}</style>
 					<div
 						className="mb-canvas"
 						data-testid="canvas"
 						onClick={() => dispatch({ type: "select", id: null })}
 						onPointerLeave={() => setHoveredId(null)}
 					>
-						<main className="site-main mb-canvas-main">
+						<main
+							className="site-main mb-canvas-main"
+							data-device={device}
+							style={{ maxWidth: BREAKPOINTS.find((b) => b.key === device)?.canvas || "none", marginLeft: "auto", marginRight: "auto" }}
+						>
 							<article>
 								<div className="entry-content">
 									<NodeView
@@ -593,7 +622,7 @@ function App() {
 							</button>
 						</div>
 						{tab === "block" ? (
-							<BlockTab node={selected} isRoot={selected?.id === tree.id} dispatch={dispatch} />
+							<BlockTab node={selected} isRoot={selected?.id === tree.id} dispatch={dispatch} device={device} />
 						) : (
 							<PageTab title={title} dispatch={dispatch} />
 						)}
@@ -975,6 +1004,37 @@ const IconAxis = () =>
 			<polyline points="18 9 21 12 18 15" />
 		</>
 	);
+function DeviceIcon({ bp }) {
+	if (bp === "base")
+		return I(
+			<>
+				<rect x="2" y="3" width="20" height="14" rx="2" />
+				<line x1="8" y1="21" x2="16" y2="21" />
+				<line x1="12" y1="17" x2="12" y2="21" />
+			</>
+		);
+	if (bp === "tabletL")
+		return I(
+			<>
+				<rect x="2" y="5" width="20" height="14" rx="2" />
+				<line x1="19" y1="12" x2="19.01" y2="12" />
+			</>
+		);
+	if (bp === "tabletP")
+		return I(
+			<>
+				<rect x="5" y="2" width="14" height="20" rx="2" />
+				<line x1="12" y1="19" x2="12.01" y2="19" />
+			</>
+		);
+	return I(
+		<>
+			<rect x="7" y="2" width="10" height="20" rx="2" />
+			<line x1="12" y1="18" x2="12.01" y2="18" />
+		</>
+	);
+}
+
 const IconContained = () =>
 	I(
 		<>
@@ -1074,7 +1134,7 @@ function deriveSpacingMode(v) {
 	return "individual";
 }
 
-function SpacingField({ side, sideLabel, value, onChange, onCommit }) {
+function SpacingField({ side, sideLabel, value, placeholder, onChange, onCommit }) {
 	const m = UNIT_RE.exec(value || "");
 	const display = m ? m[1] : value || "";
 	const unit = m ? m[2] : "";
@@ -1086,8 +1146,9 @@ function SpacingField({ side, sideLabel, value, onChange, onCommit }) {
 				<input
 					type="text"
 					value={display}
+					placeholder={value ? "" : placeholder || ""}
 					data-side={side}
-					title={value || ""}
+					title={value || placeholder || ""}
 					onChange={(e) => {
 						// Never trim mid-typing — calc()/var() need their spaces.
 						const t = e.target.value;
@@ -1121,7 +1182,7 @@ function SpacingField({ side, sideLabel, value, onChange, onCommit }) {
 	);
 }
 
-function SpacingControl({ label, value, onChange, onCommit }) {
+function SpacingControl({ label, value, placeholders = {}, hasLocal = false, onChange, onCommit }) {
 	const [mode, setMode] = useState(() => deriveSpacingMode(value));
 
 	const setSides = (sides, v, coalesce) => {
@@ -1155,7 +1216,10 @@ function SpacingControl({ label, value, onChange, onCommit }) {
 	return (
 		<div className="mb-field mb-spacing" data-testid="spacing-control" data-mode={mode}>
 			<span className="mb-field-label mb-spacing-head">
-				{label}
+				<span className="mb-label-dotwrap">
+					{label}
+					{hasLocal && <span className="mb-dot" data-testid="dot-padding" title="Set at this breakpoint" />}
+				</span>
 				<button type="button" className="mb-spacing-mode" data-testid="spacing-mode" title={modeMeta[mode].title} onClick={cycle}>
 					{modeMeta[mode].icon}
 				</button>
@@ -1163,12 +1227,12 @@ function SpacingControl({ label, value, onChange, onCommit }) {
 
 			<div className="mb-spacing-fields">
 				{mode === "linked" && (
-					<SpacingField side="all" sideLabel="All" value={value.top || ""} onChange={(v) => setSides(["top", "right", "bottom", "left"], v, "padding:all")} onCommit={onCommit} />
+					<SpacingField side="all" sideLabel="All" value={value.top || ""} placeholder={placeholders.top} onChange={(v) => setSides(["top", "right", "bottom", "left"], v, "padding:all")} onCommit={onCommit} />
 				)}
 				{mode === "axis" && (
 					<>
-						<SpacingField side="y" sideLabel="Y" value={value.top || ""} onChange={(v) => setSides(["top", "bottom"], v, "padding:y")} onCommit={onCommit} />
-						<SpacingField side="x" sideLabel="X" value={value.left || ""} onChange={(v) => setSides(["left", "right"], v, "padding:x")} onCommit={onCommit} />
+						<SpacingField side="y" sideLabel="Y" value={value.top || ""} placeholder={placeholders.top} onChange={(v) => setSides(["top", "bottom"], v, "padding:y")} onCommit={onCommit} />
+						<SpacingField side="x" sideLabel="X" value={value.left || ""} placeholder={placeholders.left} onChange={(v) => setSides(["left", "right"], v, "padding:x")} onCommit={onCommit} />
 					</>
 				)}
 				{mode === "individual" &&
@@ -1178,7 +1242,7 @@ function SpacingControl({ label, value, onChange, onCommit }) {
 						["bottom", "B"],
 						["left", "L"],
 					].map(([side, sideLabel]) => (
-						<SpacingField key={side} side={side} sideLabel={sideLabel} value={value[side] || ""} onChange={(v) => setSides([side], v, "padding:" + side)} onCommit={onCommit} />
+						<SpacingField key={side} side={side} sideLabel={sideLabel} value={value[side] || ""} placeholder={placeholders[side]} onChange={(v) => setSides([side], v, "padding:" + side)} onCommit={onCommit} />
 					))}
 			</div>
 
@@ -1216,14 +1280,8 @@ function SpacingControl({ label, value, onChange, onCommit }) {
 
 /* Sections registered per widget type; future widgets slot in here. */
 
-function ContainerLayoutSection({ node, isRoot, set, dispatch }) {
+function ContainerLayoutSection({ node, isRoot, set, dispatch, device }) {
 	const layout = node.props.layout === "div" || node.props.layout === "grid" ? node.props.layout : "flex";
-	const GAP_OPTIONS = [
-		["none", "None"],
-		["sm", "Small"],
-		["md", "Medium"],
-		["lg", "Large"],
-	];
 	return (
 		<>
 			{!isRoot && (
@@ -1251,9 +1309,7 @@ function ContainerLayoutSection({ node, isRoot, set, dispatch }) {
 					]}
 				/>
 			)}
-			{(layout === "flex" || layout === "grid") && (
-				<TokenSelect label="Gap" name="gap" value={node.props.gap} options={GAP_OPTIONS} onChange={(v) => set({ gap: v })} />
-			)}
+			{(layout === "flex" || layout === "grid") && <GapControl key={node.id + ":gap:" + device} node={node} device={device} dispatch={dispatch} />}
 			{!isRoot && (
 				<SegmentedControl
 					label="Width"
@@ -1266,36 +1322,128 @@ function ContainerLayoutSection({ node, isRoot, set, dispatch }) {
 					]}
 				/>
 			)}
-			<ContainerPadding node={node} dispatch={dispatch} />
+			<ContainerPadding node={node} device={device} dispatch={dispatch} />
 		</>
 	);
 }
 
-/* Legacy stepped padding (sm/md/lg classes) displays as its token
-   equivalent; the first edit converts the node to generated styles and
-   clears the legacy prop in the same history step. */
+/* Legacy stepped props (sm/md/lg classes) display as token equivalents
+   at the BASE breakpoint; the first base edit converts the node to
+   generated styles and clears the legacy prop in one history step.
+   Non-base overrides simply layer above the legacy class in the cascade. */
 const LEGACY_PAD_TOKEN = { sm: "var(--space-s)", md: "var(--space-m)", lg: "var(--space-xl)" };
+const LEGACY_GAP_TOKEN = { sm: "var(--space-s)", md: "var(--space-m)", lg: "var(--space-xl)" };
+const SIDES4 = ["top", "right", "bottom", "left"];
+const prevBpKey = (device) => BP_KEYS[BP_KEYS.indexOf(device) - 1];
 
-function ContainerPadding({ node, dispatch }) {
-	const stored = node.styles && node.styles.padding;
-	const legacy = !stored ? LEGACY_PAD_TOKEN[node.props.padding] : null;
-	const value = {
-		top: (stored && stored.top) || legacy || "",
-		right: (stored && stored.right) || legacy || "",
-		bottom: (stored && stored.bottom) || legacy || "",
-		left: (stored && stored.left) || legacy || "",
-	};
-
-	const onChange = (next, coalesce) =>
+function useStyleWriter(node, device, dispatch) {
+	return (key, next, alsoProps, coalesce) => {
+		const styles = normalizeStyles(node.styles || {});
 		dispatch({
-			type: "styles",
+			type: "stylesSet",
 			id: node.id,
-			patch: { padding: next },
-			alsoProps: node.props.padding && node.props.padding !== "none" ? { padding: "none" } : undefined,
+			styles: { ...styles, [device]: { ...(styles[device] || {}), [key]: next } },
+			alsoProps,
 			coalesce,
 		});
+	};
+}
 
-	return <SpacingControl key={node.id} label="Padding" value={value} onChange={onChange} onCommit={() => dispatch({ type: "commit" })} />;
+function ContainerPadding({ node, device, dispatch }) {
+	const legacy = LEGACY_PAD_TOKEN[node.props.padding] || "";
+	const isBase = device === "base";
+	const write = useStyleWriter(node, device, dispatch);
+
+	const value = {};
+	const placeholders = {};
+	SIDES4.forEach((s) => {
+		const local = localStyle(node, device, "padding", s);
+		value[s] = local || (isBase ? legacy : "");
+		placeholders[s] = isBase ? "" : effectiveStyle(node, prevBpKey(device), "padding", s, legacy);
+	});
+	const hasLocal = SIDES4.some((s) => localStyle(node, device, "padding", s) !== "") || (isBase && !!legacy);
+
+	const onChange = (next, coalesce) =>
+		write("padding", next, isBase && legacy ? { padding: "none" } : undefined, coalesce);
+
+	return (
+		<SpacingControl
+			key={node.id + ":" + device}
+			label="Padding"
+			value={value}
+			placeholders={placeholders}
+			hasLocal={hasLocal}
+			onChange={onChange}
+			onCommit={() => dispatch({ type: "commit" })}
+		/>
+	);
+}
+
+/* Gap: Row/Column fields with a link toggle. Linked emits shorthand
+   gap:X (compiler collapses equal row/column). Responsive from birth. */
+function GapControl({ node, device, dispatch }) {
+	const legacy = node.props.gap !== "none" ? LEGACY_GAP_TOKEN[node.props.gap] || "" : "";
+	const isBase = device === "base";
+	const write = useStyleWriter(node, device, dispatch);
+
+	const localRow = localStyle(node, device, "gap", "row");
+	const localCol = localStyle(node, device, "gap", "column");
+	const value = { row: localRow || (isBase ? legacy : ""), column: localCol || (isBase ? legacy : "") };
+	const placeholders = isBase
+		? { row: "", column: "" }
+		: {
+				row: effectiveStyle(node, prevBpKey(device), "gap", "row", legacy),
+				column: effectiveStyle(node, prevBpKey(device), "gap", "column", legacy),
+		  };
+	const hasLocal = localRow !== "" || localCol !== "" || (isBase && !!legacy);
+	const [linked, setLinked] = useState(() => value.row === value.column);
+
+	const onChange = (next, coalesce) => write("gap", next, isBase && legacy ? { gap: "none" } : undefined, coalesce);
+
+	return (
+		<div className="mb-field mb-spacing" data-testid="gap-control" data-mode={linked ? "linked" : "split"}>
+			<span className="mb-field-label mb-spacing-head">
+				<span className="mb-label-dotwrap">
+					Gap
+					{hasLocal && <span className="mb-dot" data-testid="dot-gap" title="Set at this breakpoint" />}
+				</span>
+				<button
+					type="button"
+					className="mb-spacing-mode"
+					data-testid="gap-mode"
+					title={linked ? "Linked — one value for row and column" : "Separate row and column gaps"}
+					onClick={() => {
+						if (!linked && value.row !== value.column) {
+							onChange({ row: value.row, column: value.row }, null);
+						}
+						setLinked(!linked);
+					}}
+				>
+					{linked ? <IconLink /> : <IconUnlink />}
+				</button>
+			</span>
+			<div className="mb-spacing-fields">
+				{linked ? (
+					<SpacingField side="gap-all" sideLabel="All" value={value.row} placeholder={placeholders.row} onChange={(v) => onChange({ row: v, column: v }, "gap:all")} onCommit={() => dispatch({ type: "commit" })} />
+				) : (
+					<>
+						<SpacingField side="gap-row" sideLabel="Row" value={value.row} placeholder={placeholders.row} onChange={(v) => onChange({ ...value, row: v }, "gap:row")} onCommit={() => dispatch({ type: "commit" })} />
+						<SpacingField side="gap-column" sideLabel="Column" value={value.column} placeholder={placeholders.column} onChange={(v) => onChange({ ...value, column: v }, "gap:column")} onCommit={() => dispatch({ type: "commit" })} />
+					</>
+				)}
+			</div>
+			<div className="mb-spacing-presets" role="group" aria-label="Gap tokens">
+				{SPACE_TOKENS.map((tok) => (
+					<button key={tok} type="button" data-testid={"gap-token-" + tok} title={`var(--space-${tok})`} onClick={() => { const v = `var(--space-${tok})`; onChange({ row: v, column: v }, null); setLinked(true); }}>
+						{tok}
+					</button>
+				))}
+				<button type="button" data-testid="gap-token-clear" title="Clear gap" onClick={() => { onChange({ row: "", column: "" }, null); setLinked(true); }}>
+					×
+				</button>
+			</div>
+		</div>
+	);
 }
 
 function TextContentSection({ node, set, dispatch }) {
@@ -1320,7 +1468,7 @@ const WIDGET_SECTIONS = {
 	text: [{ id: "content", label: "Content", icon: <IconType />, render: TextContentSection }],
 };
 
-function BlockTab({ node, isRoot, dispatch }) {
+function BlockTab({ node, isRoot, dispatch, device }) {
 	if (!node) {
 		return (
 			<div className="mb-empty-state" data-testid="empty-state">
@@ -1341,7 +1489,7 @@ function BlockTab({ node, isRoot, dispatch }) {
 
 			{sections.map((s) => (
 				<Section key={s.id} id={s.id} icon={s.icon} label={s.label}>
-					<s.render node={node} isRoot={isRoot} set={set} dispatch={dispatch} />
+					<s.render node={node} isRoot={isRoot} set={set} dispatch={dispatch} device={device} />
 				</Section>
 			))}
 

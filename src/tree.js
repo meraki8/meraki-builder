@@ -31,18 +31,123 @@ export const createNode = (type) => ({
 });
 
 /**
- * Compile per-node generated styles (styles.padding for now) to CSS.
- * Mirrors the server-side compiler; the canvas injects the result live.
+ * THE breakpoint constant (mirrored in PHP: meraki_builder_breakpoints()).
+ * Desktop-first: base has no media query; smaller views override inside
+ * max-width queries, emitted in descending width order.
+ */
+export const BREAKPOINTS = [
+	{ key: "base", label: "Desktop", maxWidth: null, canvas: null },
+	{ key: "tabletL", label: "Tablet Landscape", maxWidth: 1024, canvas: 1024 },
+	{ key: "tabletP", label: "Tablet Portrait", maxWidth: 768, canvas: 768 },
+	{ key: "mobile", label: "Mobile", maxWidth: 480, canvas: 390 },
+];
+export const BP_KEYS = BREAKPOINTS.map((b) => b.key);
+
+const PAD_SIDES = ["top", "right", "bottom", "left"];
+
+/**
+ * Pre-0.4.0 nodes store flat styles.padding; read it as base.padding.
+ * Pure — used at read time everywhere, materialized on first edit.
+ */
+export function normalizeStyles(styles) {
+	if (!styles) return {};
+	if (!styles.padding) return styles;
+	const { padding, ...rest } = styles;
+	return {
+		...rest,
+		base: { ...(rest.base || {}), padding: { ...((rest.base || {}).padding || {}), ...padding } },
+	};
+}
+
+/** Local (stored) value of styles[bucket][key][prop], or "". */
+export function localStyle(node, bucket, key, prop) {
+	const s = normalizeStyles(node.styles);
+	return (((s[bucket] || {})[key] || {})[prop] || "").trim();
+}
+
+/**
+ * Effective value at a breakpoint: nearest larger breakpoint (or the
+ * breakpoint itself) that sets the property; `legacy` supplies the
+ * stepped-prop token as the base-level fallback.
+ */
+export function effectiveStyle(node, bucket, key, prop, legacy = "") {
+	const s = normalizeStyles(node.styles);
+	let value = legacy;
+	for (const bp of BP_KEYS) {
+		const v = (((s[bp] || {})[key] || {})[prop] || "").trim();
+		if (v !== "") value = v;
+		if (bp === bucket) break;
+	}
+	return value;
+}
+
+/** Does this bucket hold any non-empty style value on the node? */
+export function bucketHasStyles(node, bucket) {
+	const b = normalizeStyles(node.styles)[bucket];
+	if (!b) return false;
+	return Object.values(b).some((group) => group && Object.values(group).some((v) => (v || "").trim() !== ""));
+}
+
+function bucketDeclarations(bucket) {
+	const decl = [];
+	const pad = bucket.padding;
+	if (pad) {
+		PAD_SIDES.forEach((s) => {
+			if ((pad[s] || "").trim() !== "") decl.push(`padding-${s}:${pad[s].trim()}`);
+		});
+	}
+	const gap = bucket.gap;
+	if (gap) {
+		const row = (gap.row || "").trim();
+		const col = (gap.column || "").trim();
+		if (row !== "" && row === col) decl.push(`gap:${row}`);
+		else {
+			if (row !== "") decl.push(`row-gap:${row}`);
+			if (col !== "") decl.push(`column-gap:${col}`);
+		}
+	}
+	return decl;
+}
+
+/**
+ * Front-end-shaped compile (base rule + descending max-width queries).
+ * Mirrors the server compiler; used for verification and reference.
  */
 export function compileStyles(node, prefix = "", out = []) {
-	const pad = node.styles && node.styles.padding;
-	if (pad) {
-		const rules = ["top", "right", "bottom", "left"]
-			.filter((s) => (pad[s] || "").trim() !== "")
-			.map((s) => `padding-${s}:${pad[s].trim()}`);
-		if (rules.length) out.push(`${prefix}.m-${node.id}{${rules.join(";")}}`);
+	const s = normalizeStyles(node.styles);
+	for (const bp of BREAKPOINTS) {
+		const decl = s[bp.key] ? bucketDeclarations(s[bp.key]) : [];
+		if (decl.length) {
+			const rule = `${prefix}.m-${node.id}{${decl.join(";")}}`;
+			out.push(bp.maxWidth ? `@media (max-width:${bp.maxWidth}px){${rule}}` : rule);
+		}
 	}
 	node.children.forEach((c) => compileStyles(c, prefix, out));
+	return out;
+}
+
+/**
+ * Canvas compile: the canvas resizes rather than being a real viewport,
+ * so media queries can't fire — emit each node's EFFECTIVE styles for
+ * the previewed breakpoint directly.
+ */
+export function compileCanvasStyles(node, deviceKey, out = []) {
+	const s = normalizeStyles(node.styles);
+	const idx = BP_KEYS.indexOf(deviceKey);
+	const merged = {};
+	for (let i = 0; i <= idx; i++) {
+		const b = s[BP_KEYS[i]];
+		if (!b) continue;
+		for (const key of Object.keys(b)) {
+			merged[key] = merged[key] || {};
+			for (const prop of Object.keys(b[key])) {
+				if ((b[key][prop] || "").trim() !== "") merged[key][prop] = b[key][prop];
+			}
+		}
+	}
+	const decl = bucketDeclarations(merged);
+	if (decl.length) out.push(`.mb-canvas .m-${node.id}{${decl.join(";")}}`);
+	node.children.forEach((c) => compileCanvasStyles(c, deviceKey, out));
 	return out;
 }
 

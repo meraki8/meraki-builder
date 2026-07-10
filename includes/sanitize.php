@@ -67,21 +67,63 @@ function meraki_builder_sanitize_style_value( $value ) {
 }
 
 /**
- * styles object whitelist: styles.padding.{top,right,bottom,left},
- * non-empty values only.
+ * Breakpoints (mirrored in src/tree.js BREAKPOINTS): desktop-first,
+ * base emits bare rules, the rest max-width media queries in this
+ * (descending) order.
+ */
+function meraki_builder_breakpoints() {
+	return array(
+		'base'    => null,
+		'tabletL' => 1024,
+		'tabletP' => 768,
+		'mobile'  => 480,
+	);
+}
+
+/**
+ * styles whitelist: per-breakpoint buckets, each holding
+ * padding.{top,right,bottom,left} and gap.{row,column}. Pre-0.4.0 flat
+ * styles.padding is read as base.padding. Non-empty values only.
  */
 function meraki_builder_sanitize_styles( $styles ) {
-	$clean = array();
+	// legacy flat shape -> base bucket
 	if ( ! empty( $styles['padding'] ) && is_array( $styles['padding'] ) ) {
-		$padding = array();
-		foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
-			$value = meraki_builder_sanitize_style_value( $styles['padding'][ $side ] ?? '' );
-			if ( '' !== $value ) {
-				$padding[ $side ] = $value;
+		$styles['base']['padding'] = array_merge( $styles['base']['padding'] ?? array(), $styles['padding'] );
+		unset( $styles['padding'] );
+	}
+
+	$clean = array();
+	foreach ( array_keys( meraki_builder_breakpoints() ) as $bp ) {
+		$bucket = array();
+
+		if ( ! empty( $styles[ $bp ]['padding'] ) && is_array( $styles[ $bp ]['padding'] ) ) {
+			$padding = array();
+			foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
+				$value = meraki_builder_sanitize_style_value( $styles[ $bp ]['padding'][ $side ] ?? '' );
+				if ( '' !== $value ) {
+					$padding[ $side ] = $value;
+				}
+			}
+			if ( $padding ) {
+				$bucket['padding'] = $padding;
 			}
 		}
-		if ( $padding ) {
-			$clean['padding'] = $padding;
+
+		if ( ! empty( $styles[ $bp ]['gap'] ) && is_array( $styles[ $bp ]['gap'] ) ) {
+			$gap = array();
+			foreach ( array( 'row', 'column' ) as $axis ) {
+				$value = meraki_builder_sanitize_style_value( $styles[ $bp ]['gap'][ $axis ] ?? '' );
+				if ( '' !== $value ) {
+					$gap[ $axis ] = $value;
+				}
+			}
+			if ( $gap ) {
+				$bucket['gap'] = $gap;
+			}
+		}
+
+		if ( $bucket ) {
+			$clean[ $bp ] = $bucket;
 		}
 	}
 	return $clean;

@@ -148,23 +148,66 @@ function meraki_builder_tree_text( $node ) {
 }
 
 /**
- * Gather per-node CSS: generated styles first (styles.padding for now),
- * then the custom css field so it can override. Empty = nothing emitted.
+ * Declarations for one breakpoint bucket (padding sides + gap; equal
+ * row/column gap collapses to the shorthand).
  */
-function meraki_builder_collect_css( $node ) {
-	$css = '';
-	$id  = preg_replace( '/[^a-z0-9]/', '', strtolower( $node['id'] ?? '' ) );
+function meraki_builder_bucket_declarations( $bucket ) {
+	$decl = array();
 
-	if ( '' !== $id && ! empty( $node['styles']['padding'] ) && is_array( $node['styles']['padding'] ) ) {
-		$rules = array();
+	if ( ! empty( $bucket['padding'] ) && is_array( $bucket['padding'] ) ) {
 		foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
-			$value = meraki_builder_sanitize_style_value( $node['styles']['padding'][ $side ] ?? '' );
+			$value = meraki_builder_sanitize_style_value( $bucket['padding'][ $side ] ?? '' );
 			if ( '' !== $value ) {
-				$rules[] = 'padding-' . $side . ':' . $value;
+				$decl[] = 'padding-' . $side . ':' . $value;
 			}
 		}
-		if ( $rules ) {
-			$css .= '.m-' . $id . '{' . implode( ';', $rules ) . '}' . "\n";
+	}
+
+	if ( ! empty( $bucket['gap'] ) && is_array( $bucket['gap'] ) ) {
+		$row = meraki_builder_sanitize_style_value( $bucket['gap']['row'] ?? '' );
+		$col = meraki_builder_sanitize_style_value( $bucket['gap']['column'] ?? '' );
+		if ( '' !== $row && $row === $col ) {
+			$decl[] = 'gap:' . $row;
+		} else {
+			if ( '' !== $row ) {
+				$decl[] = 'row-gap:' . $row;
+			}
+			if ( '' !== $col ) {
+				$decl[] = 'column-gap:' . $col;
+			}
+		}
+	}
+
+	return $decl;
+}
+
+/**
+ * Gather per-node CSS: generated styles first (base rule, then max-width
+ * media queries in descending order — desktop-first cascade), then the
+ * custom css field so it can override. Empty = nothing emitted, never
+ * an empty media query.
+ */
+function meraki_builder_collect_css( $node ) {
+	$css    = '';
+	$id     = preg_replace( '/[^a-z0-9]/', '', strtolower( $node['id'] ?? '' ) );
+	$styles = is_array( $node['styles'] ?? null ) ? $node['styles'] : array();
+
+	// pre-0.4.0 flat padding reads as base
+	if ( ! empty( $styles['padding'] ) && is_array( $styles['padding'] ) ) {
+		$styles['base']['padding'] = array_merge( $styles['base']['padding'] ?? array(), $styles['padding'] );
+	}
+
+	if ( '' !== $id ) {
+		foreach ( meraki_builder_breakpoints() as $bp => $max_width ) {
+			if ( empty( $styles[ $bp ] ) || ! is_array( $styles[ $bp ] ) ) {
+				continue;
+			}
+			$decl = meraki_builder_bucket_declarations( $styles[ $bp ] );
+			if ( ! $decl ) {
+				continue;
+			}
+			$rule = '.m-' . $id . '{' . implode( ';', $decl ) . '}';
+			$css .= ( $max_width ? '@media (max-width:' . $max_width . 'px){' . $rule . '}' : $rule ) . "\n";
 		}
 	}
 
